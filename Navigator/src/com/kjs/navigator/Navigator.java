@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import com.kjs.navigator.R;
+import com.kjs.navigator.StepCounter.OnStepEventListener;
 import com.qozix.tileview.TileView;
 import com.qozix.tileview.TileView.TileViewEventListener;
 import com.qozix.tileview.markers.MarkerEventListener;
@@ -23,7 +24,7 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-public class Navigator extends Activity implements SensorEventListener{
+public class Navigator extends Activity implements SensorEventListener, OnStepEventListener{
 
 	private TileView tileView;
 	private ImageView naviSymbol;
@@ -35,6 +36,7 @@ public class Navigator extends Activity implements SensorEventListener{
 	private boolean gettingSecondaryPoint=false;
 	private ImageView startSymbol;
 	private ImageView headingSymbol;
+	private StepCounter stepCounter;
 	//private TileViewEventListener tileEventListener;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -61,6 +63,8 @@ public class Navigator extends Activity implements SensorEventListener{
 		tileView.addMarkerEventListener( markerEventListener );
 
 		tileView.addTileViewEventListener(tileEventListener);
+		
+		stepCounter= new StepCounter(this);
 		// add some pins...
 		roundedHeading=0;
 		currentX=200;
@@ -111,6 +115,7 @@ public class Navigator extends Activity implements SensorEventListener{
 	public void start()
 	{
 		Log.d("Function Call","Start");
+		stepCounter.pushdata(1, 2, 3);
 	}
 	/*
 	private void addPin( double x, double y ) {
@@ -336,6 +341,16 @@ public class Navigator extends Activity implements SensorEventListener{
 				getTileView().moveToAndCenter( x, y );
 			}			
 		});		
+	}
+
+
+
+
+	@Override
+	public void stepEvent() {
+		// TODO Auto-generated method stub
+		Log.d("Function call","Step Event triggered");
+		
 	}
 
 	//############## Unused Stuff #####################
