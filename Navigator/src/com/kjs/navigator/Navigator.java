@@ -3,6 +3,7 @@ package com.kjs.navigator;
 import java.io.IOException;
 import java.io.InputStream;
 
+
 import com.kjs.navigator.R;
 import com.qozix.tileview.TileView;
 import com.qozix.tileview.TileView.TileViewEventListener;
@@ -36,6 +37,17 @@ public class Navigator extends Activity implements SensorEventListener{
 	private ImageView startSymbol;
 	private ImageView headingSymbol;
 	//private TileViewEventListener tileEventListener;
+	
+	//##### Public Variables #####
+	private double stepLength = 15; //step length in cm
+	private double CMPERPIXEL = 5;
+	private int M = 10; 			// Particle count
+	private Point startLocation;
+	private Point[] particles = new Point[10];
+	private Polygon ITBhalls;
+	
+	private double previousStepTimestamp = 0;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -71,13 +83,15 @@ public class Navigator extends Activity implements SensorEventListener{
 		// center the frame
 		frameTo( 0.5, 0.5 );
 		
-	}
+		
+	}// End onCreate
 	
 	
 
 
 	//######### Custom Functions #############
-	public void inputStart()
+	
+	public void inputStartLocation()
 	{
 		if (!gettingInitialPoint && !gettingSecondaryPoint)
 		{
@@ -87,12 +101,56 @@ public class Navigator extends Activity implements SensorEventListener{
 			//Log.d("Function Call","InputStart Finished");
 		}
 	}
+	
+	private void initializeParticleFilter(){
+		float theta;
+		for (int i = 0; i < M ; i++){
+			theta = (float) (i * (2 * Math.PI / M));
+			float x = (float) (startLocation.x + stepLength * Math.cos(theta));
+			float y = (float) (startLocation.y + stepLength * Math.sin(theta));
+			particles[i] = new Point(x,y);
+		}
+			ITBhalls = Polygon.Builder()
+				.addVertex(new Point(560, 180))
+				.addVertex(new Point(580, 180))
+				.addVertex(new Point(588, 226))
+				.addVertex(new Point(1126, 221))
+				.addVertex(new Point(1126, 721))
+				.addVertex(new Point(961, 721))
+				.addVertex(new Point(961, 750))
+				.addVertex(new Point(913, 750))
+				.addVertex(new Point(913, 721))
+				.addVertex(new Point(518, 721))
+				.addVertex(new Point(517, 688))
+				.addVertex(new Point(773, 688))
+				.addVertex(new Point(773, 488))
+				.addVertex(new Point(886, 488))
+				.addVertex(new Point(886, 462))
+				.addVertex(new Point(851, 462))
+				.addVertex(new Point(851, 450))
+				.addVertex(new Point(900, 450))
+				.addVertex(new Point(900, 488))
+				.addVertex(new Point(950, 480))
+				.addVertex(new Point(950, 688))
+				.addVertex(new Point(1102, 688))
+				.addVertex(new Point(1102, 247))
+				.addVertex(new Point(600, 247))
+				.addVertex(new Point(600, 318))
+				.addVertex(new Point(560, 318))
+				.close()
+				.addVertex(new Point(789, 504))
+				.addVertex(new Point(789, 688))
+				.addVertex(new Point(926, 688))
+				.addVertex(new Point(924, 504))
+				.build();
+	}
 
 	public void createStartSymbol(int x, int y)
 	{
 		startSymbol = new ImageView( this);
 		startSymbol.setImageResource( R.drawable.push_pin );
 		getTileView().addMarker(startSymbol, x, y );
+		startLocation = new Point(x,y);   
 	}
 	public void createHeadingSymbol(int x, int y)
 	{
@@ -272,6 +330,7 @@ public class Navigator extends Activity implements SensorEventListener{
 				createHeadingSymbol(scaledX,scaledY);
 				gettingSecondaryPoint=false;
 				//Wipe the Symbols
+				initializeParticleFilter();
 			}
 
 		}
@@ -303,7 +362,7 @@ public class Navigator extends Activity implements SensorEventListener{
 		// Handle item selection
 		switch (item.getItemId()) {
 		case R.id.action_inputStart:
-			inputStart();
+			inputStartLocation();
 			return true;
 		case R.id.action_reset:
 			reset();
@@ -338,6 +397,29 @@ public class Navigator extends Activity implements SensorEventListener{
 		});		
 	}
 
+	public void stepTaken(double currentStepTimestamp){
+		
+		//TODO: calculate Stride Length from step period
+		double period = previousStepTimestamp - currentStepTimestamp;
+		previousStepTimestamp = currentStepTimestamp;
+		// these number are from the graph in the first paper
+		// 	Lg = a*f + b
+		stepLength = ((1/period) * 22.2 + 29) * CMPERPIXEL;
+
+		//TODO: Generate new particles based on new heading and stride length
+		// Check for dead particles
+
+		// compare particles with walls, eliminate bad particles		
+		for (int i = 0; i < M ; i++){
+			if (ITBhalls.contains(particles[i]));{
+				//TODO set point to new point
+				
+			}
+		}
+		//TODO: possibly calculate probability of remaining particles and eliminate outliers
+		//TODO: plot remaining particles on the map.
+	}
+	
 	//############## Unused Stuff #####################
 	/*
 	private HotSpot hotMap;
