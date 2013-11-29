@@ -284,7 +284,7 @@ public class Navigator extends Activity {
 		Log.d("Function Call","Reset");
 		currentX+=10;
 		currentY+=10;
-		roundedHeading+=10;
+		roundedHeading=(roundedHeading+60)%60;
 		updateLocal(currentX,currentY,false);
 	}
 	
