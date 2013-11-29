@@ -1,15 +1,11 @@
 package com.kjs.navigator;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 
 import com.kjs.navigator.R;
 import com.qozix.tileview.TileView;
 import com.qozix.tileview.TileView.TileViewEventListener;
-import com.qozix.tileview.hotspots.HotSpot;
-import com.qozix.tileview.hotspots.HotSpotEventListener;
 import com.qozix.tileview.markers.MarkerEventListener;
 
 import android.os.Bundle;
@@ -17,6 +13,9 @@ import android.app.Activity;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -24,7 +23,7 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-public class Navigator extends Activity {
+public class Navigator extends Activity implements SensorEventListener{
 
 	private TileView tileView;
 	private ImageView naviSymbol;
@@ -33,6 +32,9 @@ public class Navigator extends Activity {
 	private int roundedHeading;
 	private double scale=1;
 	private boolean gettingInitialPoint=false;
+	private boolean gettingSecondaryPoint=false;
+	private ImageView startSymbol;
+	private ImageView headingSymbol;
 	//private TileViewEventListener tileEventListener;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -57,31 +59,66 @@ public class Navigator extends Activity {
 
 		// add a marker listener
 		tileView.addMarkerEventListener( markerEventListener );
-		
+
 		tileView.addTileViewEventListener(tileEventListener);
 		// add some pins...
-		//addPin( 0.25, 0.25 );
-		//addPin( 0.25, 0.75 );
-		//addPin( 0.75, 0.25 );
-		//addPin( 0.75, 0.75 );
-		//addPin( 0.50, 0.50 );
 		roundedHeading=0;
 		currentX=200;
 		currentY=200;
 		updateLocal(currentX,currentY,true);
 		// scale it down to manageable size
 		tileView.setScale( 0.5 );
-
 		// center the frame
 		frameTo( 0.5, 0.5 );
-
-
+		
 	}
+	
+	
+
+
+	//######### Custom Functions #############
+	public void inputStart()
+	{
+		if (!gettingInitialPoint && !gettingSecondaryPoint)
+		{
+			Log.d("Function Call","Input Start");
+
+			gettingInitialPoint=true;
+			//Log.d("Function Call","InputStart Finished");
+		}
+	}
+
+	public void createStartSymbol(int x, int y)
+	{
+		startSymbol = new ImageView( this);
+		startSymbol.setImageResource( R.drawable.push_pin );
+		getTileView().addMarker(startSymbol, x, y );
+	}
+	public void createHeadingSymbol(int x, int y)
+	{
+		headingSymbol = new ImageView( this);
+		headingSymbol.setImageResource( R.drawable.maps_marker_blue );
+		getTileView().addMarker(headingSymbol, x, y );
+	}
+	public void reset()
+	{
+		Log.d("Function Call","Reset");
+		currentX+=10;
+		currentY+=10; 
+		roundedHeading=(roundedHeading+60)%360;
+		updateLocal(currentX,currentY,false);
+	}
+	public void start()
+	{
+		Log.d("Function Call","Start");
+	}
+	/*
 	private void addPin( double x, double y ) {
 		ImageView imageView = new ImageView( this );
 		imageView.setImageResource( R.drawable.push_pin );
 		getTileView().addMarker( imageView, x, y );
-	}
+	}*/
+	
 	private void updateLocal( double x, double y ,boolean first) {
 		if (!first)
 		{
@@ -92,20 +129,7 @@ public class Navigator extends Activity {
 		//naviSymbol.setImageResource( R.drawable.push_pin );
 		getTileView().addMarker( naviSymbol, x, y );
 	}
-	public Bitmap getBitmapFromAssets(String fileName) {
-	    AssetManager assetManager = getAssets();
 
-	    InputStream istr = null;
-	    try {
-			istr = assetManager.open(fileName); 
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	    Bitmap bitmap = BitmapFactory.decodeStream(istr);
-
-	    return bitmap;
-	}
 	private MarkerEventListener markerEventListener = new MarkerEventListener() {
 		@Override
 		public void onMarkerTap( View v, int x, int y ) {
@@ -113,6 +137,191 @@ public class Navigator extends Activity {
 		}		
 	};
 	
+	
+	public Bitmap getBitmapFromAssets(String fileName) {
+		AssetManager assetManager = getAssets();
+
+		InputStream istr = null;
+		try {
+			istr = assetManager.open(fileName); 
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		Bitmap bitmap = BitmapFactory.decodeStream(istr);
+
+		return bitmap;
+	}
+	//################## END OF CUSTOM FUNCTIONS #####################
+
+
+
+	///##################SENSOR BEHAVIOUR############################
+	@Override
+	public void onSensorChanged(SensorEvent arg0) {
+		// TODO Auto-generated method stub
+
+	}
+
+	//#################### TILE TOUCH BEHAVIOUR #######################
+	private TileViewEventListener tileEventListener = new TileViewEventListener() {
+
+		@Override
+		public void onDetailLevelChanged() {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void onDoubleTap(int arg0, int arg1) {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void onDrag(int arg0, int arg1) {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void onFingerDown(int arg0, int arg1) {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void onFingerUp(int arg0, int arg1) {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void onFling(int arg0, int arg1, int arg2, int arg3) {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void onFlingComplete(int arg0, int arg1) {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void onPinch(int arg0, int arg1) {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void onPinchComplete(int arg0, int arg1) {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void onPinchStart(int arg0, int arg1) {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void onRenderComplete() {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void onRenderStart() {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void onScaleChanged(double arg0) {
+			// TODO Auto-generated method stub
+			scale=arg0;
+		}
+
+		@Override
+		public void onScrollChanged(int arg0, int arg1) {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void onTap(int arg0, int arg1) {
+			// TODO Auto-generated method stub
+			if (gettingInitialPoint)
+			{
+				Log.d("Tap Event","X:"+arg0+" Y:"+arg1);
+				int scaledX=(int)(arg0/scale);
+				int scaledY=(int)(arg1/scale);
+				Log.d("Tap Event","Scaled X:"+scaledX+" Scaled Y:"+scaledY);
+				createStartSymbol(scaledX,scaledY);
+				gettingInitialPoint=false;
+				gettingSecondaryPoint=true;
+			}
+			else if (gettingSecondaryPoint)
+			{
+				Log.d("Tap Event","Secondary X:"+arg0+" Y:"+arg1);
+				int scaledX=(int)(arg0/scale);
+				int scaledY=(int)(arg1/scale);
+				Log.d("Tap Event","Secondary Scaled X:"+scaledX+" Scaled Y:"+scaledY);
+				createHeadingSymbol(scaledX,scaledY);
+				gettingSecondaryPoint=false;
+				//Wipe the Symbols
+			}
+
+		}
+
+		@Override
+		public void onZoomComplete(double arg0) {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void onZoomStart(double arg0) {
+			// TODO Auto-generated method stub
+
+		}
+
+	};
+	//########## PREMADE STUFF ###############
+	//Options Premade
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		// Inflate the menu; this adds items to the action bar if it is present.
+		getMenuInflater().inflate(R.menu.navigator, menu);
+		return true;
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		// Handle item selection
+		switch (item.getItemId()) {
+		case R.id.action_inputStart:
+			inputStart();
+			return true;
+		case R.id.action_reset:
+			reset();
+			return true;
+		case R.id.action_start:
+			start();
+			return true;
+		default:
+			return super.onOptionsItemSelected(item);
+		}
+	}
+	//Sensor Premade
+	@Override
+	public void onAccuracyChanged(Sensor arg0, int arg1) {
+		// TODO Auto-generated method stub
+
+	}
+	// TILE Premade
 	public TileView getTileView(){
 		return tileView;
 	}
@@ -128,188 +337,29 @@ public class Navigator extends Activity {
 			}			
 		});		
 	}
-	//######### Custom Functions #############
-	public void inputStart()
-	{
-		Log.d("Function Call","InputStart");
-		//HotSpot allMap= new HotSpot(0,0,2048,1887);
-		//allMap.setHotSpotEventListener(startHotSpotEventListener);
-		ArrayList<double[]> points = new ArrayList<double[]>();
-		{
-			points.add( new double[] { 0, 0 } );
-			points.add( new double[] { 0, 100 } );
-			points.add( new double[] { 100, 0 } );
-			points.add( new double[] { 100, 100 } );
-		}
-		hotMap=tileView.addHotSpot(points, startHotSpotEventListener);
-		
-		gettingInitialPoint=true;
-		Log.d("Function Call","InputStart Finished");
-		
-	}
-	public void createStartSymbol(int x, int y)
-	{
-		ImageView startSymbol = new ImageView( this);
-		startSymbol.setImageResource( R.drawable.push_pin );
-		getTileView().addMarker(startSymbol, x, y );
-	}
+
+	//############## Unused Stuff #####################
+	/*
 	private HotSpot hotMap;
 	private HotSpotEventListener startHotSpotEventListener = new HotSpotEventListener() {
 		@Override
 		public void onHotSpotTap( HotSpot h, int x, int y ) {
 			Log.d("Variables", "Initial Position X: "+x+" Y: "+y);
 			//tileView.removeHotSpot(hotMap);
-			
-			
+
+
 		}		
-	};
-	private TileViewEventListener tileEventListener = new TileViewEventListener() {
-
-		@Override
-		public void onDetailLevelChanged() {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
-		public void onDoubleTap(int arg0, int arg1) {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
-		public void onDrag(int arg0, int arg1) {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
-		public void onFingerDown(int arg0, int arg1) {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
-		public void onFingerUp(int arg0, int arg1) {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
-		public void onFling(int arg0, int arg1, int arg2, int arg3) {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
-		public void onFlingComplete(int arg0, int arg1) {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
-		public void onPinch(int arg0, int arg1) {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
-		public void onPinchComplete(int arg0, int arg1) {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
-		public void onPinchStart(int arg0, int arg1) {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
-		public void onRenderComplete() {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
-		public void onRenderStart() {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
-		public void onScaleChanged(double arg0) {
-			// TODO Auto-generated method stub
-			scale=arg0;
-		}
-
-		@Override
-		public void onScrollChanged(int arg0, int arg1) {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
-		public void onTap(int arg0, int arg1) {
-			// TODO Auto-generated method stub
-			if (gettingInitialPoint)
-			{
-			Log.d("Tap Event","X:"+arg0+" Y:"+arg1);
-			int scaledX=(int)(arg0/scale);
-			int scaledY=(int)(arg1/scale);
-			Log.d("Tap Event","Scaled X:"+scaledX+" Scaled Y:"+scaledY);
-			createStartSymbol(scaledX,scaledY);
-			gettingInitialPoint=false;
-			}
-			
-		}
-
-		@Override
-		public void onZoomComplete(double arg0) {
-			// TODO Auto-generated method stub
-			
-		}
-
-		@Override
-		public void onZoomStart(double arg0) {
-			// TODO Auto-generated method stub
-			
-		}
-		
-	};
-	
-	
-	public void reset()
+	};*/
+	//HotSpot allMap= new HotSpot(0,0,2048,1887);
+	//allMap.setHotSpotEventListener(startHotSpotEventListener);
+	/*ArrayList<double[]> points = new ArrayList<double[]>();
 	{
-		Log.d("Function Call","Reset");
-		currentX+=10;
-		currentY+=10;
-		roundedHeading=(roundedHeading+60)%60;
-		updateLocal(currentX,currentY,false);
+		points.add( new double[] { 0, 0 } );
+		points.add( new double[] { 0, 100 } );
+		points.add( new double[] { 100, 0 } );
+		points.add( new double[] { 100, 100 } );
 	}
-	
-	
-	//########## PREMADE STUFF ###############
-	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		// Inflate the menu; this adds items to the action bar if it is present.
-		getMenuInflater().inflate(R.menu.navigator, menu);
-		return true;
-	}
-	
-	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-	    // Handle item selection
-	    switch (item.getItemId()) {
-	        case R.id.action_inputStart:
-	            inputStart();
-	            return true;
-	        case R.id.action_reset:
-	            reset();
-	            return true;
-	        default:
-	            return super.onOptionsItemSelected(item);
-	    }
-	}
+	hotMap=tileView.addHotSpot(points, startHotSpotEventListener);
+	 */
 
 }
