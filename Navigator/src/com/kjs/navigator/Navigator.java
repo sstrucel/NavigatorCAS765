@@ -46,15 +46,13 @@ public class Navigator extends Activity implements SensorEventListener{
 	private int numParticles = 50; 			// Particle count
 	private Point startLocation;
 	private Point currentLocation;
-	private Point[] particles = new Point[10];
 	private Polygon ITBhalls;
 	
 	private double previousStepTimestamp = 0;
 	
 	
 	//need to create initial particles X and Y cloud around initial position
-//	double[] particleX = new double[numParticles];
-//	double[] particleY = new double[numParticles];
+	private Point[] particles = new Point[numParticles];
 	double[] particleA = new double[numParticles];
 	double[] particleB = new double[numParticles];
 
@@ -68,6 +66,13 @@ public class Navigator extends Activity implements SensorEventListener{
 	double bStd = 10;			//guess at offset std
 
 	Random rng = new Random();
+	
+	double[] heading = new double[100];   //need to have a past history of heading values, maybe shift new values in
+	double[] filteredHeading = new double[100];
+	int stepsSinceLastTurn = 0;
+	double deltaHeadingThreshold = Math.PI/2;
+	double averagePastHeading = 0; //TODO needs to be initialized it heading  
+	double currentHeading = 0;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -95,7 +100,7 @@ public class Navigator extends Activity implements SensorEventListener{
 
 		tileView.addTileViewEventListener(tileEventListener);
 		
-		stepCounter= new StepCounter(this);
+//		stepCounter= new StepCounter(this); //CAUSES CRASH ON STARTUP FOR NOW
 		// add some pins...
 		roundedHeading=0;
 		currentX=200;
@@ -129,8 +134,9 @@ public class Navigator extends Activity implements SensorEventListener{
 		
 		//Generate particle cloud around starting location
 		for (int i = 0; i<numParticles; i++) {
-			particles[i].x = (float) (startLocation.x + locationMean + locationStd * rng.nextGaussian());
-			particles[i].y = (float) (startLocation.y + locationMean + locationStd * rng.nextGaussian());
+			float x = (float) (startLocation.x + locationMean + locationStd * rng.nextGaussian());
+			float y = (float) (startLocation.y + locationMean + locationStd * rng.nextGaussian());
+			particles[i] = new Point(x,y);
 			
 			particleA[i] = aMean + aStd * rng.nextGaussian();
 			particleB[i] = bMean + bStd * rng.nextGaussian();
@@ -433,14 +439,6 @@ public class Navigator extends Activity implements SensorEventListener{
 		
 	}
 
-	
-	double[] heading = new double[100];   //need to have a past history of heading values, maybe shift new values in
-	double[] filteredHeading = new double[100];
-	int stepsSinceLastTurn = 0;
-	double deltaHeadingThreshold = Math.PI/2;
-	double averagePastHeading = 0; //TODO needs to be initialized it heading  
-	double currentHeading = 0;
-	
 	public void stepTaken(double currentStepTimestamp){
 		//First, we shall try to determine if the user has turned
 
@@ -476,8 +474,10 @@ public class Navigator extends Activity implements SensorEventListener{
 		for (int i = 0; i<numParticles; i++) {
 			stepLength[i] = ( particleA[i] * 1/period) + particleB[i];
 		
-			particles[i].x = (float) (particles[i].x + ( ( stepLength[i] ) * Math.cos(currentHeading ) ));
-			particles[i].y = (float) (particles[i].y + ( ( stepLength[i] ) * Math.sin(currentHeading ) ));
+			
+			float x = (float) (particles[i].x + ( ( stepLength[i] ) * Math.cos(currentHeading ) ));
+			float y = (float) (particles[i].y + ( ( stepLength[i] ) * Math.sin(currentHeading ) ));
+			particles[i] = new Point(x,y);	
 			
 			totalX += particles[i].x;
 			totalY += particles[i].y;
@@ -491,8 +491,9 @@ public class Navigator extends Activity implements SensorEventListener{
 		
 		for (int i = 0; i < numParticles; i++) {
 			if (ITBhalls.contains(particles[i])) {
-				particles[i].x = (float) (averageX + locationStd * rng.nextGaussian());
-				particles[i].y = (float) (averageY + locationStd * rng.nextGaussian());
+				float x = (float) (averageX + locationStd * rng.nextGaussian());
+				float y = (float) (averageY + locationStd * rng.nextGaussian());
+				particles[i] = new Point(x,y);
 			}
 			
 			totalX += particles[i].x;
@@ -502,8 +503,7 @@ public class Navigator extends Activity implements SensorEventListener{
 		averageX = totalX / numParticles;
 		averageY = totalY / numParticles;
 		
-		currentLocation.x = averageX;
-		currentLocation.y = averageY;	
+		currentLocation = new Point (averageX, averageY);	
 	
 		//TODO: plot current position
 	}
