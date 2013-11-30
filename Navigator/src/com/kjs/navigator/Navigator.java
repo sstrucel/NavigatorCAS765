@@ -41,6 +41,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	private double scale=1;
 	private boolean gettingInitialPoint=false;
 	private boolean gettingSecondaryPoint=false;
+	private boolean firstAddSymbol=true;
 	private ImageView startSymbol;
 	private ImageView headingSymbol;
 	private DrawablePath startPath;
@@ -54,7 +55,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	private Point startLocation;
 	private Point headingLocation;
 	//private Point[] particles = new Point[10];
-	private Point currentLocation;
+	private Point currentLocation=new Point(0,0);
 	private Polygon ITBhalls;
 	
 	private double previousStepTimestamp = 0;
@@ -111,16 +112,23 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		tileView.setMarkerAnchorPoints( -0.5f, -0.5f );
 
 		// add a marker listener
-		tileView.addMarkerEventListener( markerEventListener );
+		//tileView.addMarkerEventListener( markerEventListener );
 
 		tileView.addTileViewEventListener(tileEventListener);
 		
 		stepCounter= new StepCounter(this);
 		// add some pins...
-		roundedHeading=0;
-		currentX=200;
-		currentY=200;
-		updateLocal(currentX,currentY,roundedHeading,true);
+		//roundedHeading=0;
+		//currentX=200;
+		//currentY=200;
+		Log.d("Created", "Current Position "+currentLocation.toString());
+		naviSymbol = new ImageView( this );
+		//naviSymbol.setImageBitmap(getBitmapFromAssets("pointer/naviPointer-"+0+".png"));
+		firstAddSymbol=true;
+		updateLocal(currentLocation.x,currentLocation.y,currentHeading);
+		firstAddSymbol=false;
+		Log.d("Created", "Current Position "+currentLocation.toString());
+		//updateLocal(currentX,currentY,roundedHeading);
 		// scale it down to manageable size
 		tileView.setScale( 0.5 );
 		// center the frame
@@ -198,6 +206,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		startSymbol.setImageResource( R.drawable.start );
 		getTileView().addMarker(startSymbol, x, y );
 		startLocation = new Point(x,y);   
+		currentLocation=new Point(x,y);   
 	}
 	public void createHeadingSymbol(int x, int y)
 	{
@@ -216,8 +225,17 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	public void initializeStartHeading()
 	{
 		int headingDeg=findHeading(startLocation.x,startLocation.y, headingLocation.x,headingLocation.y);
-		Log.d("Heading Created","Start Location X:"+startLocation.x+" Y:"+startLocation.y+" Heading Angle:"+headingDeg);
-		updateLocal(startLocation.x,startLocation.y,headingDeg,false);
+		Log.d("xHeading Created","Start Location X:"+startLocation.x+" Y:"+startLocation.y+" Heading Angle:"+headingDeg);
+		currentHeading=headingDeg;
+		updateLocal(startLocation.x,startLocation.y,headingDeg);
+	}
+	public void updatePosition()
+	{
+		int stepLength=10;
+		currentLocation.x=(int)(currentLocation.x+stepLength*Math.sin(currentHeading*Math.PI/180));
+		currentLocation.y=(int)(currentLocation.y-stepLength*Math.cos(currentHeading*Math.PI/180));
+		Log.d("xPosition Updated","Current Location X:"+currentLocation.x+" Y:"+currentLocation.y+" Heading Angle:"+currentHeading);
+		updateLocal(currentLocation.x,currentLocation.y,currentHeading);
 	}
 	public int findHeading(float x,float y, float x2,float y2)
 	{
@@ -248,7 +266,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		currentX+=10;
 		currentY+=10; 
 		roundedHeading=(roundedHeading+60)%360;
-		updateLocal(currentX,currentY, roundedHeading,false);
+		updateLocal(currentX,currentY, roundedHeading);
 	}
 	public void start()
 	{
@@ -268,15 +286,18 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		getTileView().addMarker( imageView, x, y );
 	}*/
 	
-	private void updateLocal( double x, double y ,int angle,boolean first) {
-		if (!first)
+	private void updateLocal( double x, double y ,double angle) {
+		if (!firstAddSymbol)
 		{
 			getTileView().removeMarker(naviSymbol);
+			
 		}
-		naviSymbol = new ImageView( this );
-		naviSymbol.setImageBitmap(getBitmapFromAssets("pointer/naviPointer-"+angle+".png"));
+		//naviSymbol = new ImageView( this );
+		//naviSymbol.setImageBitmap(getBitmapFromAssets("pointer/naviPointer-"+angle+".png"));
 		//naviSymbol.setImageResource( R.drawable.push_pin );
+		naviSymbol.setImageBitmap(getBitmapFromAssets("pointer/naviPointer-"+(int)angle+".png"));
 		getTileView().addMarker( naviSymbol, x, y );
+		firstAddSymbol=false;
 	}
 
 	private MarkerEventListener markerEventListener = new MarkerEventListener() {
@@ -515,6 +536,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	public void stepEvent() {
 		// TODO Auto-generated method stub
 		Log.d("Step event","Step Event triggered");
+		updatePosition();
 		
 	}
 
