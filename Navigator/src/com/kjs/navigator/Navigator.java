@@ -402,7 +402,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		});		
 	}
 
-<<<<<<< HEAD
+
 
 
 
@@ -413,7 +413,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		
 	}
 
-=======
+
 	public void stepTaken(double currentStepTimestamp){
 		
 		//TODO: calculate Stride Length from step period
@@ -437,7 +437,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		//TODO: plot remaining particles on the map.
 	}
 	
->>>>>>> 1fb5e379b667fd720a34406b7ee984865c3a0cbd
+
 	//############## Unused Stuff #####################
 	/*
 	private HotSpot hotMap;
