@@ -2,6 +2,7 @@ package com.kjs.navigator;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
@@ -77,10 +78,14 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	double bMean = 30;			//from figure 6 in paper, approx value of offset
 	double bStd = 10;			//guess at offset std
 
-	Random rng = new Random();
+	Random rng = new Random();	//Random Number Generator spreads our particles in a gaussian distribution.
 	
-	double[] heading = new double[9];   //need to have a past history of heading values, maybe shift new values in
-	double[] headingAtStep = new double[50];
+	//need to have a past history of heading values, maybe shift new values in
+	ArrayList<Float> rawHeading = new ArrayList<Float>();
+	int rawHeadingMAX = 9; 
+	ArrayList<Float> headingAtStep = new ArrayList<Float>();
+	int headingAtStepMAX = 50;
+	
 	int stepsSinceLastTurn = 0;
 	double deltaHeadingThreshold = Math.PI/2;
 	double averagePastHeading = 0; //TODO needs to be initialized it heading  
@@ -313,9 +318,14 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	///##################SENSOR BEHAVIOUR############################
 	@Override
 	public void onSensorChanged(SensorEvent arg0) {
-		// TODO Auto-generated method stub
-		if (arg0.sensor = mAccell)
+		if (arg0.sensor == mAccelerometer)
 			stepCounter.pushdata(arg0.values[0], arg0.values[1], arg0.values[2]);
+		else if (arg0.sensor == mCompass){
+			if (rawHeading.size() > rawHeadingMAX ){
+				rawHeading.remove(0);
+			}
+			rawHeading.add(arg0.values[0]);
+		}
 
 	}
 
@@ -530,27 +540,24 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		//Perform filter on heading directions
 		//Not sure how that is done
 		//sort recent heading values
-		double[] sortedHeading = new double[9];
-		for (int i = 0; i <= 9; i++) {
-			sortedHeading[i] = heading[i];
-		}
-	 
+		Float[] sortedHeading = (Float[]) rawHeading.toArray();
 		Arrays.sort(sortedHeading);
 	 
 		//TODO headingAtCurrentStep[] = ( ( sortedHeading[4] + sortedHeading[5] + sortedHeading[6] ) / 3 );
 
 		stepsSinceLastTurn++;
 		double headingSum = 0;
-		
-		for (int i = 0; i<stepsSinceLastTurn; i++) {
-			headingSum += filteredHeading[i];
+	
+		for (int i = 0; i<headingAtStep.size(); i++) {
+			headingSum += headingAtStep.get(i);
 		}
 		double averagePastHeading = headingSum / stepsSinceLastTurn;
 		
-		double deltaHeading = filteredHeading[filteredHeading.length - 1] - averagePastHeading;
+		double deltaHeading = headingAtStep.get(headingAtStep.size() - 1) - averagePastHeading;
 		
 		if (deltaHeading > deltaHeadingThreshold) {
 			stepsSinceLastTurn = 0;
+			headingAtStep.removeAll(headingAtStep);
 		}
 		
 		currentHeading = averagePastHeading;
