@@ -39,7 +39,6 @@ public class StepCounter {
 	
     public interface OnStepEventListener {
         public void stepEvent();
-        
     }
     public StepCounter(Activity activity){
         try {
