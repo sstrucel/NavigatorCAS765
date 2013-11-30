@@ -31,7 +31,7 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-public class Navigator extends Activity implements SensorEventListener{
+public class Navigator extends Activity implements SensorEventListener, OnStepEventListener{
 
 	private TileView tileView;
 	private ImageView naviSymbol;
@@ -115,7 +115,7 @@ public class Navigator extends Activity implements SensorEventListener{
 
 		tileView.addTileViewEventListener(tileEventListener);
 		
-//		stepCounter= new StepCounter(this); //CAUSES CRASH ON STARTUP FOR NOW
+		stepCounter= new StepCounter(this);
 		// add some pins...
 		roundedHeading=0;
 		currentX=200;
@@ -512,7 +512,6 @@ public class Navigator extends Activity implements SensorEventListener{
 
 
 
-	@Override
 	public void stepEvent() {
 		// TODO Auto-generated method stub
 		Log.d("Step event","Step Event triggered");
@@ -587,6 +586,7 @@ public class Navigator extends Activity implements SensorEventListener{
 	
 		//TODO: plot current position
 	}
+	
 	
 	//############## Unused Stuff #####################
 	/*
