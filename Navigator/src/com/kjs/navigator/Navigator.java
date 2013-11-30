@@ -54,7 +54,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	private int numParticles = 50; 			// Particle count
 	private Point startLocation;
 	private Point headingLocation;
-	private Point[] particles = new Point[10];
+	//private Point[] particles = new Point[10];
 	private Point currentLocation;
 	private Polygon ITBhalls;
 	
