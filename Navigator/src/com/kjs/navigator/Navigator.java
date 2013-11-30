@@ -12,12 +12,14 @@ import com.qozix.tileview.markers.MarkerEventListener;
 
 import android.os.Bundle;
 import android.app.Activity;
+import android.content.Context;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -49,11 +51,17 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	private Polygon ITBhalls; 
 	
 	private double previousStepTimestamp = 0;
+	private SensorManager mSensorManager;
+	private Sensor mAccelerometer;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_navigator);
+		
+		mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        
 		tileView = new TileView( this );
 		setContentView( tileView );
 		// size of original image at 100% scale
@@ -174,6 +182,11 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	{
 		Log.d("Function Call","Start");
 		stepCounter.pushdata(1, 2, 3);
+		mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
+	}
+	private void stop() {
+		// TODO Auto-generated method stub
+		mSensorManager.unregisterListener(this, mAccelerometer);
 	}
 	/*
 	private void addPin( double x, double y ) {
@@ -223,6 +236,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	@Override
 	public void onSensorChanged(SensorEvent arg0) {
 		// TODO Auto-generated method stub
+		stepCounter.pushdata(arg0.values[0], arg0.values[1], arg0.values[2]);
 
 	}
 
@@ -375,10 +389,18 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		case R.id.action_start:
 			start();
 			return true;
+		case R.id.action_stop:
+			stop();
+			return true;
 		default:
 			return super.onOptionsItemSelected(item);
 		}
 	}
+
+
+
+
+
 	//Sensor Premade
 	@Override
 	public void onAccuracyChanged(Sensor arg0, int arg1) {
@@ -409,7 +431,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	@Override
 	public void stepEvent() {
 		// TODO Auto-generated method stub
-		Log.d("Function call","Step Event triggered");
+		Log.d("Step event","Step Event triggered");
 		
 	}
 

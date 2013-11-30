@@ -49,6 +49,11 @@ public class StepCounter {
                     + " must implement OnHeadlineSelectedListener");
         }
         mInitialized=false;
+        lowPassFIR_filter = new LowPassFIR(0.09);
+        lowPassFIR_integrate = new LowPassFIR(0.09);
+        
+        highPassFIR = new HighPassFIR(30, 0.9f);
+        tool = new Tool();
     	   
     }
     public void pushdata(double xR,double yR,double zR)
@@ -100,7 +105,7 @@ public class StepCounter {
     		double currentReading = lowPassFIR_integrate.integrate1(Math.pow((lowPassFIR_filter.transform_2(tool.norm(deltaX, deltaY, deltaZ))), 2));
     		long currentTime = System.currentTimeMillis();
     		
-    		Log.i("aaa", lastReading + " ? " + currentReading);
+    		//Log.i("aaa", lastReading + " ? " + currentReading);
     		
     		if (largestReading < currentReading){
     			largestReading = currentReading;
