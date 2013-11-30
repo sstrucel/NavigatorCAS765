@@ -46,7 +46,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	private int M = 10; 			// Particle count
 	private Point startLocation;
 	private Point[] particles = new Point[10];
-	private Polygon ITBhalls;
+	private Polygon ITBhalls; 
 	
 	private double previousStepTimestamp = 0;
 	
