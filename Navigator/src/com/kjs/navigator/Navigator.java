@@ -2,6 +2,7 @@ package com.kjs.navigator;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 
 
 import com.kjs.navigator.R;
@@ -9,8 +10,10 @@ import com.kjs.navigator.StepCounter.OnStepEventListener;
 import com.qozix.tileview.TileView;
 import com.qozix.tileview.TileView.TileViewEventListener;
 import com.qozix.tileview.markers.MarkerEventListener;
+import com.qozix.tileview.paths.DrawablePath;
 
 import android.os.Bundle;
+import android.os.Handler;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.AssetManager;
@@ -39,6 +42,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	private boolean gettingSecondaryPoint=false;
 	private ImageView startSymbol;
 	private ImageView headingSymbol;
+	private DrawablePath startPath;
 	private StepCounter stepCounter;
 	//private TileViewEventListener tileEventListener;
 	
@@ -47,6 +51,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	private double CMPERPIXEL = 5;
 	private int M = 10; 			// Particle count
 	private Point startLocation;
+	private Point headingLocation;
 	private Point[] particles = new Point[10];
 	private Polygon ITBhalls; 
 	
@@ -89,7 +94,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		roundedHeading=0;
 		currentX=200;
 		currentY=200;
-		updateLocal(currentX,currentY,true);
+		updateLocal(currentX,currentY,roundedHeading,true);
 		// scale it down to manageable size
 		tileView.setScale( 0.5 );
 		// center the frame
@@ -160,15 +165,52 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	public void createStartSymbol(int x, int y)
 	{
 		startSymbol = new ImageView( this);
-		startSymbol.setImageResource( R.drawable.push_pin );
+		startSymbol.setImageResource( R.drawable.start );
 		getTileView().addMarker(startSymbol, x, y );
 		startLocation = new Point(x,y);   
 	}
 	public void createHeadingSymbol(int x, int y)
 	{
 		headingSymbol = new ImageView( this);
-		headingSymbol.setImageResource( R.drawable.maps_marker_blue );
+		headingSymbol.setImageResource( R.drawable.heading );
 		getTileView().addMarker(headingSymbol, x, y );
+		headingLocation = new Point(x,y);  
+		ArrayList<double[]> points = new ArrayList<double[]>();
+		{
+			points.add( new double[] { headingLocation.x, headingLocation.y } );
+			points.add( new double[] { startLocation.x,  startLocation.y } );
+		}
+		startPath=tileView.drawPath(points);
+		
+	}
+	public void initializeStartHeading()
+	{
+		int headingDeg=findHeading(startLocation.x,startLocation.y, headingLocation.x,headingLocation.y);
+		Log.d("Heading Created","Start Location X:"+startLocation.x+" Y:"+startLocation.y+" Heading Angle:"+headingDeg);
+		updateLocal(startLocation.x,startLocation.y,headingDeg,false);
+	}
+	public int findHeading(float x,float y, float x2,float y2)
+	{
+		double dX= x-x2;
+		double dY= y-y2;
+		//return (int)((Math.atan2(dY, dX)*180)/Math.PI);
+		double arcTanVal=(Math.atan2(dY, dX)*180)/Math.PI;
+		
+		//return (int)(270-arcTanVal);
+		double newVal= (360-(-arcTanVal+180)+90);
+		//Log.d("Heading Raw","Heading Raw A:"+newVal);
+		if (newVal>360)
+		{
+			newVal=newVal-360;
+		}
+		//Log.d("Heading Raw","Heading Raw B:"+newVal);
+		return (int)newVal;
+	}
+	public void cleanupSymbols()
+	{
+		tileView.removeMarker(startSymbol);
+		tileView.removeMarker(headingSymbol);
+		tileView.removePath(startPath);
 	}
 	public void reset()
 	{
@@ -176,7 +218,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		currentX+=10;
 		currentY+=10; 
 		roundedHeading=(roundedHeading+60)%360;
-		updateLocal(currentX,currentY,false);
+		updateLocal(currentX,currentY, roundedHeading,false);
 	}
 	public void start()
 	{
@@ -186,6 +228,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	}
 	private void stop() {
 		// TODO Auto-generated method stub
+		Log.d("Function Call","Stop");
 		mSensorManager.unregisterListener(this, mAccelerometer);
 	}
 	/*
@@ -195,13 +238,13 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		getTileView().addMarker( imageView, x, y );
 	}*/
 	
-	private void updateLocal( double x, double y ,boolean first) {
+	private void updateLocal( double x, double y ,int angle,boolean first) {
 		if (!first)
 		{
 			getTileView().removeMarker(naviSymbol);
 		}
 		naviSymbol = new ImageView( this );
-		naviSymbol.setImageBitmap(getBitmapFromAssets("pointer/naviPointer-"+roundedHeading+".png"));
+		naviSymbol.setImageBitmap(getBitmapFromAssets("pointer/naviPointer-"+angle+".png"));
 		//naviSymbol.setImageResource( R.drawable.push_pin );
 		getTileView().addMarker( naviSymbol, x, y );
 	}
@@ -349,7 +392,19 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 				createHeadingSymbol(scaledX,scaledY);
 				gettingSecondaryPoint=false;
 				//Wipe the Symbols
-				initializeParticleFilter();
+				final Handler handler = new Handler();
+		        handler.postDelayed(new Runnable() {
+		            @Override
+		            public void run() {
+		                // Do something after 5s = 5000ms
+		            	cleanupSymbols();
+		            	initializeStartHeading();
+		            	initializeParticleFilter();
+
+		            }
+		        }, 1000);
+				//cleanupSymbols();
+				//initializeParticleFilter();
 			}
 
 		}
