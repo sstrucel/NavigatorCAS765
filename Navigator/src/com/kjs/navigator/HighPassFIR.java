@@ -1,4 +1,4 @@
-package com.hw5;
+package com.kjs.navigator;
 
 //A class for the Highpass FIR
 public class HighPassFIR {
