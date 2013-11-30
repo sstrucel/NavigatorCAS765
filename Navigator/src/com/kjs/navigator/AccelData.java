@@ -1,5 +1,6 @@
 package com.kjs.navigator;
 
+
 public class AccelData {
 	public double x;
 	public double y;

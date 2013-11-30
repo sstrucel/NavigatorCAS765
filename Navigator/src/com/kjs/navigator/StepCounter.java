@@ -36,26 +36,12 @@ public class StepCounter {
 	double lastValleyValue = 0.0;
 	Tool tool;
 	
-	
-    public interface OnStepEventListener {
-        public void stepEvent();
-        
-    }
-    public StepCounter(Activity activity){
-        try {
-            mCallback = (OnStepEventListener) activity;
-        } catch (ClassCastException e) {
-            throw new ClassCastException(activity.toString()
-                    + " must implement OnHeadlineSelectedListener");
-        }
         mInitialized=false;
         lowPassFIR_filter = new LowPassFIR(0.09);
         lowPassFIR_integrate = new LowPassFIR(0.09);
         
         highPassFIR = new HighPassFIR(30, 0.9f);
         tool = new Tool();
-    	   
-    }
     public void pushdata(double xR,double yR,double zR)
     {
     	Log.d("Function Call","Inside Step Counter X:"+xR+" Y:"+yR+" Z:"+zR);

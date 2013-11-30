@@ -3,6 +3,7 @@ package com.kjs.navigator;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Random;
 
 
 import com.kjs.navigator.R;
@@ -30,7 +31,7 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-public class Navigator extends Activity implements SensorEventListener, OnStepEventListener{
+public class Navigator extends Activity implements SensorEventListener{
 
 	private TileView tileView;
 	private ImageView naviSymbol;
@@ -47,17 +48,42 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	//private TileViewEventListener tileEventListener;
 	
 	//##### Public Variables #####
-	private double stepLength = 15; //step length in cm
+	private double[] stepLength; //step length in cm
 	private double CMPERPIXEL = 5;
-	private int M = 10; 			// Particle count
+	private int numParticles = 50; 			// Particle count
 	private Point startLocation;
 	private Point headingLocation;
 	private Point[] particles = new Point[10];
-	private Polygon ITBhalls; 
+	private Point currentLocation;
+	private Polygon ITBhalls;
 	
 	private double previousStepTimestamp = 0;
 	private SensorManager mSensorManager;
 	private Sensor mAccelerometer;
+	
+	
+	//need to create initial particles X and Y cloud around initial position
+	private Point[] particles = new Point[numParticles];
+	double[] particleA = new double[numParticles];
+	double[] particleB = new double[numParticles];
+
+	double locationMean = 0.0;	//Mean will almost always be zero for location
+	double locationStd = 5;		//standard deviation in pixels
+	
+	double aMean = 20.0;		//from figure 6 in paper, approx mean of slope
+	double aStd = 10;			//guess at slope std
+	
+	double bMean = 30;			//from figure 6 in paper, approx value of offset
+	double bStd = 10;			//guess at offset std
+
+	Random rng = new Random();
+	
+	double[] heading = new double[100];   //need to have a past history of heading values, maybe shift new values in
+	double[] filteredHeading = new double[100];
+	int stepsSinceLastTurn = 0;
+	double deltaHeadingThreshold = Math.PI/2;
+	double averagePastHeading = 0; //TODO needs to be initialized it heading  
+	double currentHeading = 0;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -89,7 +115,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 
 		tileView.addTileViewEventListener(tileEventListener);
 		
-		stepCounter= new StepCounter(this);
+//		stepCounter= new StepCounter(this); //CAUSES CRASH ON STARTUP FOR NOW
 		// add some pins...
 		roundedHeading=0;
 		currentX=200;
@@ -120,13 +146,17 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	}
 	
 	private void initializeParticleFilter(){
-		float theta;
-		for (int i = 0; i < M ; i++){
-			theta = (float) (i * (2 * Math.PI / M));
-			float x = (float) (startLocation.x + stepLength * Math.cos(theta));
-			float y = (float) (startLocation.y + stepLength * Math.sin(theta));
+		
+		//Generate particle cloud around starting location
+		for (int i = 0; i<numParticles; i++) {
+			float x = (float) (startLocation.x + locationMean + locationStd * rng.nextGaussian());
+			float y = (float) (startLocation.y + locationMean + locationStd * rng.nextGaussian());
 			particles[i] = new Point(x,y);
+			
+			particleA[i] = aMean + aStd * rng.nextGaussian();
+			particleB[i] = bMean + bStd * rng.nextGaussian();
 		}
+
 			ITBhalls = Polygon.Builder()
 				.addVertex(new Point(560, 180))
 				.addVertex(new Point(580, 180))
@@ -482,7 +512,6 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 
 
 
-
 	@Override
 	public void stepEvent() {
 		// TODO Auto-generated method stub
@@ -490,31 +519,75 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		
 	}
 
-
 	public void stepTaken(double currentStepTimestamp){
+		//First, we shall try to determine if the user has turned
+
+		//Perform filter on heading directions
+		//Not sure how that is done
 		
-		//TODO: calculate Stride Length from step period
+
+		stepsSinceLastTurn++;
+		double headingSum = 0;
+		
+		for (int i = 0; i<stepsSinceLastTurn; i++) {
+			headingSum += filteredHeading[i];
+		}
+		double averagePastHeading = headingSum / stepsSinceLastTurn;
+		
+		double deltaHeading = filteredHeading[filteredHeading.length - 1] - averagePastHeading;
+		
+		if (deltaHeading > deltaHeadingThreshold) {
+			stepsSinceLastTurn = 0;
+		}
+		
+		currentHeading = averagePastHeading;
+		
+		int totalX = 0;
+		int totalY = 0;
+		
+		// calculate step frequency from step period
 		double period = previousStepTimestamp - currentStepTimestamp;
 		previousStepTimestamp = currentStepTimestamp;
-		// these number are from the graph in the first paper
-		// 	Lg = a*f + b
-		stepLength = ((1/period) * 22.2 + 29) * CMPERPIXEL;
 
-		//TODO: Generate new particles based on new heading and stride length
-		// Check for dead particles
-
-		// compare particles with walls, eliminate bad particles		
-		for (int i = 0; i < M ; i++){
-			if (ITBhalls.contains(particles[i]));{
-				//TODO set point to new point
-				
-			}
+		
+		//Second, we update all of the particles, we also compute the average X and Y at this point
+		for (int i = 0; i<numParticles; i++) {
+			stepLength[i] = ( particleA[i] * 1/period) + particleB[i];
+		
+			
+			float x = (float) (particles[i].x + ( ( stepLength[i] ) * Math.cos(currentHeading ) ));
+			float y = (float) (particles[i].y + ( ( stepLength[i] ) * Math.sin(currentHeading ) ));
+			particles[i] = new Point(x,y);	
+			
+			totalX += particles[i].x;
+			totalY += particles[i].y;
 		}
-		//TODO: possibly calculate probability of remaining particles and eliminate outliers
-		//TODO: plot remaining particles on the map.
+		
+		int averageX = totalX / numParticles;
+		int averageY = totalY / numParticles;
+		
+		totalX = 0;
+		totalY = 0;
+		
+		for (int i = 0; i < numParticles; i++) {
+			if (ITBhalls.contains(particles[i])) {
+				float x = (float) (averageX + locationStd * rng.nextGaussian());
+				float y = (float) (averageY + locationStd * rng.nextGaussian());
+				particles[i] = new Point(x,y);
+			}
+			
+			totalX += particles[i].x;
+			totalY += particles[i].y;
+		}
+
+		averageX = totalX / numParticles;
+		averageY = totalY / numParticles;
+		
+		currentLocation = new Point (averageX, averageY);	
+	
+		//TODO: plot current position
 	}
 	
-
 	//############## Unused Stuff #####################
 	/*
 	private HotSpot hotMap;
