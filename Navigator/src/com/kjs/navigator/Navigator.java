@@ -3,6 +3,7 @@ package com.kjs.navigator;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Random;
 
 
@@ -59,7 +60,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	
 	private double previousStepTimestamp = 0;
 	private SensorManager mSensorManager;
-	private Sensor mAccelerometer;
+	private Sensor mAccelerometer, mCompass;
 	
 	
 	//need to create initial particles X and Y cloud around initial position
@@ -78,8 +79,8 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 
 	Random rng = new Random();
 	
-	double[] heading = new double[100];   //need to have a past history of heading values, maybe shift new values in
-	double[] filteredHeading = new double[100];
+	double[] heading = new double[9];   //need to have a past history of heading values, maybe shift new values in
+	double[] headingAtStep = new double[50];
 	int stepsSinceLastTurn = 0;
 	double deltaHeadingThreshold = Math.PI/2;
 	double averagePastHeading = 0; //TODO needs to be initialized it heading  
@@ -92,7 +93,8 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		
 		mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        
+        mCompass = mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION);
+
 		tileView = new TileView( this );
 		setContentView( tileView );
 		// size of original image at 100% scale
@@ -255,11 +257,14 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		Log.d("Function Call","Start");
 		stepCounter.pushdata(1, 2, 3);
 		mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
+        mSensorManager.registerListener(this, mCompass, SensorManager.SENSOR_DELAY_GAME);
+
 	}
 	private void stop() {
 		// TODO Auto-generated method stub
 		Log.d("Function Call","Stop");
 		mSensorManager.unregisterListener(this, mAccelerometer);
+        mSensorManager.unregisterListener(this, mCompass);
 	}
 	/*
 	private void addPin( double x, double y ) {
@@ -309,7 +314,8 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	@Override
 	public void onSensorChanged(SensorEvent arg0) {
 		// TODO Auto-generated method stub
-		stepCounter.pushdata(arg0.values[0], arg0.values[1], arg0.values[2]);
+		if (arg0.sensor = mAccell)
+			stepCounter.pushdata(arg0.values[0], arg0.values[1], arg0.values[2]);
 
 	}
 
@@ -523,7 +529,15 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 
 		//Perform filter on heading directions
 		//Not sure how that is done
-		
+		//sort recent heading values
+		double[] sortedHeading = new double[9];
+		for (int i = 0; i <= 9; i++) {
+			sortedHeading[i] = heading[i];
+		}
+	 
+		Arrays.sort(sortedHeading);
+	 
+		//TODO headingAtCurrentStep[] = ( ( sortedHeading[4] + sortedHeading[5] + sortedHeading[6] ) / 3 );
 
 		stepsSinceLastTurn++;
 		double headingSum = 0;
