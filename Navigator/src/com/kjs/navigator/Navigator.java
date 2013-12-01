@@ -90,7 +90,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	int stepsSinceLastTurn = 0;
 	double deltaHeadingThreshold = Math.PI/2;
 	double averagePastHeading = 0; //TODO needs to be initialized it heading  
-	double currentHeading = 0;
+	float currentHeading = 0;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -555,18 +555,66 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		updatePosition();
 		
 	}
-
+	public float fixCompassReadings()
+	{
+		float first =shiftQuadrants(0);
+		float second =shiftQuadrants(first);	
+		if (first==second)
+		{
+			return first;
+		}
+		while (first!=second)
+		{
+			first =shiftQuadrants(second);
+			second =shiftQuadrants(first);	
+		}
+		return first;
+	}
+	public float shiftQuadrants(float p)
+	{
+		//Find min and Max of array
+		float max=0;
+		float min=360;
+		for (int i=0;i<rawHeading.size();i++)
+		{
+			if (rawHeading.get(i)>max)
+			{
+				max=rawHeading.get(i);
+			}
+			if (rawHeading.get(i)<min)
+			{
+				min=rawHeading.get(i);
+			}
+			
+		}
+		//If differ by 180 +180 to the mix 
+		if (Math.abs(max-min)>180)
+		{
+			for (int i=0;i<rawHeading.size();i++)
+			{
+				rawHeading.set(i, (rawHeading.get(i)+p+90)%360);
+			}
+			return (p+90)%360;
+		}
+		return p%360;
+	}
+	
+	
 	public void stepTaken(double currentStepTimestamp){
 		//First, we shall try to determine if the user has turned
 
 		//Perform filter on heading directions
 		//Not sure how that is done
 		//sort recent heading values
+		float shift=fixCompassReadings();
 		Float[] sortedHeading = (Float[]) rawHeading.toArray();
 		Arrays.sort(sortedHeading);
 	 
 		//TODO headingAtCurrentStep[] = ( ( sortedHeading[4] + sortedHeading[5] + sortedHeading[6] ) / 3 );
-
+		//minHeading=Math.min(d1, d2)
+		currentHeading = ( ( sortedHeading[4] + sortedHeading[5] + sortedHeading[6] ) / 3 );
+		headingAtStep.add(currentHeading-shift);
+		
 		stepsSinceLastTurn++;
 		double headingSum = 0;
 	
@@ -582,7 +630,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 			headingAtStep.removeAll(headingAtStep);
 		}
 		
-		currentHeading = averagePastHeading;
+		//currentHeading = averagePastHeading;
 		
 		int totalX = 0;
 		int totalY = 0;
@@ -626,6 +674,8 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		averageY = totalY / numParticles;
 		
 		currentLocation = new Point (averageX, averageY);	
+		
+		updateLocal(currentLocation.x,currentLocation.y,currentHeading);
 	
 		//TODO: plot current position
 	}
