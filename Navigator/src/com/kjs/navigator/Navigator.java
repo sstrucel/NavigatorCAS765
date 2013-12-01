@@ -190,8 +190,8 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 				.addVertex(new Point(1164, 1573))
 				.addVertex(new Point(207, 1573))
 				.addVertex(new Point(207, 1486))
-				.addVertex(new Point(1880, 1486))
-				.addVertex(new Point(1880, 965))
+				.addVertex(new Point(880, 1486))
+				.addVertex(new Point(880, 965))
 				.addVertex(new Point(1180, 965))
 				.addVertex(new Point(1180, 890))
 				.addVertex(new Point(1086, 890))
@@ -211,6 +211,49 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 				.addVertex(new Point(1277, 1490))
 				.addVertex(new Point(1277, 1005))
 				.build();
+		ArrayList<double[]> itbpointsOuter = new ArrayList<double[]>();
+		{
+			itbpointsOuter.add( new double[] { 318, 154 } );//1
+			itbpointsOuter.add( new double[] { 397, 154 } );
+			itbpointsOuter.add( new double[] { 397, 275 } );
+			itbpointsOuter.add( new double[] { 1808, 275 } );
+			itbpointsOuter.add( new double[] { 1808, 1574 } );
+			itbpointsOuter.add( new double[] { 1463, 1574 } );
+			itbpointsOuter.add( new double[] { 1463, 1654 } );
+			itbpointsOuter.add( new double[] { 1164, 1654 } );
+			itbpointsOuter.add( new double[] { 1164, 1573 } );
+			itbpointsOuter.add( new double[] { 207, 1573 } );
+			itbpointsOuter.add( new double[] { 207, 1486 } );
+			itbpointsOuter.add( new double[] { 880, 1486 } );
+			itbpointsOuter.add( new double[] { 880, 965 } );
+			itbpointsOuter.add( new double[] { 1180, 965 } );
+			itbpointsOuter.add( new double[] { 1180, 890 } );
+			itbpointsOuter.add( new double[] { 1086, 890 } );
+			itbpointsOuter.add( new double[] { 1086, 860 } );
+			itbpointsOuter.add( new double[] { 1207, 860 } );
+			itbpointsOuter.add( new double[] { 1207, 950 } );
+			itbpointsOuter.add( new double[] { 1346, 950 } );
+			itbpointsOuter.add( new double[] { 1346, 1487 } );
+			itbpointsOuter.add( new double[] { 1736, 1487 } );
+			itbpointsOuter.add( new double[] { 1736, 340 } );
+			itbpointsOuter.add( new double[] { 422, 340 } );
+			itbpointsOuter.add( new double[] { 422, 516 } );
+			itbpointsOuter.add( new double[] { 318, 516 } );	
+			itbpointsOuter.add( new double[] { 318, 154 } );
+		}
+		ArrayList<double[]> itbpointsInner = new ArrayList<double[]>();
+		{
+			itbpointsInner.add( new double[] { 920, 1005 } );//1
+			itbpointsInner.add( new double[] { 920, 1490} );
+			itbpointsInner.add( new double[] { 1277, 1490 } );
+			itbpointsInner.add( new double[] { 1277, 1005 } );
+			itbpointsInner.add( new double[] { 920, 1005 } );
+		}
+		
+		tileView.drawPath(itbpointsOuter);
+		tileView.drawPath(itbpointsInner);
+		
+		
 	}
 
 	public void createStartSymbol(int x, int y)
@@ -317,7 +360,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		}
 		//naviSymbol = new ImageView( this );
 		//naviSymbol.setImageBitmap(getBitmapFromAssets("pointer/naviPointer-"+angle+".png"));
-		//naviSymbol.setImageResource( R.drawable.push_pin );
+		//naviSymbol.setImageResource( R.drawable.smallpoint);
 		naviSymbol.setImageBitmap(getBitmapFromAssets("pointer/naviPointer-"+(int)angle+".png"));
 		getTileView().addMarker( naviSymbol, x, y );
 		firstAddSymbol=false;
@@ -568,7 +611,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	public void stepEvent() {
 		// TODO Auto-generated method stub
 		Log.d("Step event","Step Event triggered");
-		stepTaken(System.currentTimeMillis()); 
+		stepTaken(System.currentTimeMillis()/1000); 
 		//updatePosition();
 
 	}
@@ -629,14 +672,14 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		//Perform filter on heading directions
 		//Not sure how that is done
 		//sort recent heading values
-		logCompass();
+		//logCompass();
 		float shift=fixCompassReadings();
 		Log.d("Compass Shift","Shift: "+shift); 
-		logCompass();
+		//logCompass();
 		//Float[] sortedHeading = (Float[]) rawHeading.toArray();
 		Collections.sort(rawHeading);
 		//Arrays.sort(sortedHeading);
-		logCompass();
+		//logCompass();
 
 		//TODO headingAtCurrentStep[] = ( ( sortedHeading[4] + sortedHeading[5] + sortedHeading[6] ) / 3 );
 		//minHeading=Math.min(d1, d2)
@@ -665,22 +708,22 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		int totalY = 0;
 
 		// calculate step frequency from step period
-		double period = previousStepTimestamp - currentStepTimestamp;
+		double period = currentStepTimestamp-previousStepTimestamp ;
 		previousStepTimestamp = currentStepTimestamp;
 
 
 		//Second, we update all of the particles, we also compute the average X and Y at this point
 		for (int i = 0; i<numParticles; i++) {
-			stepLength[i] = ( particleA[i] * 1/period) + particleB[i];
-
-
-			float x = (float) (particles[i].x + ( ( stepLength[i] ) * Math.cos(currentHeading ) ));
-			float y = (float) (particles[i].y + ( ( stepLength[i] ) * Math.sin(currentHeading ) ));
+			stepLength[i] = 20;//( particleA[i] * 1/period) + particleB[i];
+			//Log.i("Step Length", "Length:"+stepLength[i]);
+ 
+			float x = (float) (particles[i].x + ( ( stepLength[i] ) * Math.sin(currentHeading*Math.PI/180) ));
+			float y = (float) (particles[i].y - ( ( stepLength[i] ) * Math.cos(currentHeading*Math.PI/180) ));
 			particles[i] = new Point(x,y);	
 
 			totalX += particles[i].x;
 			totalY += particles[i].y;
-		}
+		} 
 
 		int averageX = totalX / numParticles;
 		int averageY = totalY / numParticles;
@@ -694,7 +737,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		ArrayList<double[]> points = new ArrayList<double[]>();
 		ArrayList<double[]> badPoints = new ArrayList<double[]>();
 		for (int i = 0; i < numParticles; i++) {
-			Log.d("Contains",""+!ITBhalls.contains(particles[i]));
+			//Log.d("Contains",""+!ITBhalls.contains(particles[i]));
 			if (!ITBhalls.contains(particles[i])) {
 				badPoints.add( new double[] { particles[i].x, particles[i].y } );
 				particleNeedsReplacing[i] = 1;
@@ -720,10 +763,16 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 			survivingAverageY=currentLocation.y;
 		}
 		for (int i = 0; i < numParticles; i++) {
-			if (particleNeedsReplacing[i] == 1) {
+			while(particleNeedsReplacing[i] == 1) {
 				float x = (float) (survivingAverageX + 0.1*locationStd * rng.nextGaussian());
 				float y = (float) (survivingAverageY + 0.1*locationStd * rng.nextGaussian());
 				particles[i] = new Point(x,y);
+				if(ITBhalls.contains(particles[i]))
+				{
+					particleNeedsReplacing[i] = 0;     
+					totalX += particles[i].x;
+					totalY += particles[i].y;
+				}
 			}
 
 		}
@@ -742,13 +791,23 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 			tileView.removePath(badPath);
 		}
 		Paint r= new Paint();
+		Paint g= new Paint();
 		r.setColor(Color.RED);
-		particlePath = tileView.drawPath(points);
+		g.setColor(Color.GREEN);
+		if(points.size()>0)
+			{
+			particlePath = tileView.drawPath(points,g);
+			Log.i("Good Points",points.toArray().toString());
+			}
 
-		if(badPoints.size()>0) badPath = tileView.drawPath(badPoints,r);
+		if(badPoints.size()>0) 
+			{
+			badPath = tileView.drawPath(badPoints,r);
+			Log.i("Bad Points",badPoints.toArray().toString());
+			}
 		//tileView.drawPath(positions, paint)
 
-
+		Log.d("Current Location","X: "+currentLocation.x+" Y:"+currentLocation.y);
 		updateLocal(currentLocation.x,currentLocation.y,currentHeading);
 
 

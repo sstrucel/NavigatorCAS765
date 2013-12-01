@@ -57,7 +57,7 @@ public class StepCounter {
     }
     public void pushdata(double xR,double yR,double zR)
     {
-    	Log.d("Function Call","Inside Step Counter X:"+xR+" Y:"+yR+" Z:"+zR);
+    	//Log.d("Function Call","Inside Step Counter X:"+xR+" Y:"+yR+" Z:"+zR);
 //     	textTH.setText("TH="+Double.toString(Peak_TH));
     	// event object contains values of acceleration
 
