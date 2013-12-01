@@ -69,9 +69,14 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	private double previousStepTimestamp = 0;
 	private SensorManager mSensorManager;
 	private Sensor mAccelerometer, mCompass;
+	
+	private int upNumber=0;
+	
+	//########### CONSTANTS###################
 	private final double PIXELS_PER_METER= 90/10; //pixels in measurement/ meters in measurement
 	private final double MAP_NORTH= 270;//Value of compass when pointing north on our map
-
+	private final int UPDATE_PACE=50;
+	
 	//need to create initial particles X and Y cloud around initial position
 	private Point[] particles = new Point[numParticles];
 	double[] particleA = new double[numParticles];
@@ -100,6 +105,10 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	float currentHeading = 0;
 	private boolean startLocationEntered=false;
 
+	private DrawablePath particlePath;
+	private boolean firstPath=true;
+	private DrawablePath badPath;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -418,6 +427,19 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 			} 
 			//Adjust heading reading by offset
 			rawHeading.add((float)(arg0.values[0]+MAP_NORTH)%360);
+			fixCompassReadings();
+			//Log.i("Raw headings","Size:"+rawHeading.size());
+			if (rawHeading.size() == rawHeadingMAX+1 )
+				{
+				//Log.i("HEADING UPDATE","Size:"+rawHeading.size());
+				upNumber=(upNumber+1)%UPDATE_PACE;
+				if (upNumber==0)
+				{
+				currentHeading = ( ( rawHeading.get(4) + rawHeading.get(5) + rawHeading.get(6) ) / 3 );
+				updateLocal(currentLocation.x,currentLocation.y,currentHeading);
+				}
+				
+				}
 		}
 
 	}
@@ -583,9 +605,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		}
 
 	};
-	private DrawablePath particlePath;
-	private boolean firstPath=true;
-	private DrawablePath badPath;
+
 	//########## PREMADE STUFF ###############
 	//Options Premade
 	@Override
@@ -653,7 +673,15 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		//updatePosition();
 
 	}
-	public float fixCompassReadings()
+	public void fixCompassReadings()
+	{
+		float shift=findshift();
+		for (int i=0;i<rawHeading.size();i++)
+		{
+			rawHeading.set(i, (rawHeading.get(i)+360-shift)%360);
+		}
+	}
+	public float findshift()
 	{
 		float first =shiftQuadrants(0);
 		float second =shiftQuadrants(first);	
@@ -685,12 +713,12 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 			}
 
 		}
-		//If differ by 180 +180 to the mix 
+		//If differ by 180 +90 to the mix 
 		if (Math.abs(max-min)>180)
 		{
 			for (int i=0;i<rawHeading.size();i++)
 			{
-				rawHeading.set(i, (rawHeading.get(i)+p+90)%360);
+				rawHeading.set(i, (rawHeading.get(i)+90)%360);
 			}
 			return (p+90)%360;
 		}
@@ -711,8 +739,8 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		//Not sure how that is done
 		//sort recent heading values
 		//logCompass();
-		float shift=fixCompassReadings();
-		Log.d("Compass Shift","Shift: "+shift); 
+		fixCompassReadings();
+		//Log.d("Compass Shift","Shift: "+shift); 
 		//logCompass();
 		//Float[] sortedHeading = (Float[]) rawHeading.toArray();
 		Collections.sort(rawHeading);
@@ -721,7 +749,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 
 		//TODO headingAtCurrentStep[] = ( ( sortedHeading[4] + sortedHeading[5] + sortedHeading[6] ) / 3 );
 		//minHeading=Math.min(d1, d2)
-		currentHeading = ( ( rawHeading.get(4) + rawHeading.get(5) + rawHeading.get(6) ) / 3 )-shift;
+		currentHeading = ( ( rawHeading.get(4) + rawHeading.get(5) + rawHeading.get(6) ) / 3 );
 		Log.d("Compass Heading","Heading: "+currentHeading);
 		headingAtStep.add(currentHeading);
 

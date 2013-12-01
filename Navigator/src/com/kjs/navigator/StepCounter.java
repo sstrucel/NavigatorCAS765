@@ -185,8 +185,8 @@ public class StepCounter {
 			previousStepTime=currentStepTime;
 			currentStepTime=System.currentTimeMillis();
 			long timeBetweenSteps=currentStepTime-previousStepTime;
-			Log.d("Times","C:"+currentStepTime+"P:"+previousStepTime);
-			Log.d("TimeDiff",""+timeBetweenSteps);
+			//Log.d("Times","C:"+currentStepTime+"P:"+previousStepTime);
+			//Log.d("TimeDiff",""+timeBetweenSteps);
 			stepPeriodList.add(timeBetweenSteps);
 			if (stepPeriodList.size()>10) stepPeriodList.remove(0);
 			//Find average time between steps
@@ -195,7 +195,7 @@ public class StepCounter {
 				total+=stepPeriodList.get(i);
 			}
 			long averageTime=total/stepPeriodList.size();
-			Log.d("TimeAvg","total:"+total+" size:"+stepPeriodList.size()+"avg: "+averageTime);
+			//Log.d("TimeAvg","total:"+total+" size:"+stepPeriodList.size()+"avg: "+averageTime);
 			if(averageTime>100)
 			{
 				if (timeBetweenSteps>averageTime*3)
@@ -206,7 +206,7 @@ public class StepCounter {
 					timer.cancel();
 					return;
 				}
-				Log.d("AverageTime",""+averageTime);
+				//Log.d("AverageTime",""+averageTime);
 				if(firstStart)timer.start(averageTime);
 				else timer.changePeriod(averageTime);
 

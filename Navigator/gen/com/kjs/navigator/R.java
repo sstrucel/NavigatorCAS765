@@ -29,9 +29,9 @@ public final class R {
         public static final int start=0x7f020005;
     }
     public static final class id {
-        public static final int action_reset=0x7f080001;
-        public static final int action_start=0x7f080002;
-        public static final int action_stop=0x7f080003;
+        public static final int action_reset=0x7f080003;
+        public static final int action_start=0x7f080001;
+        public static final int action_stop=0x7f080002;
         public static final int textView1=0x7f080000;
     }
     public static final class layout {
