@@ -2,6 +2,8 @@ package com.kjs.navigator;
 
 
 import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import com.kjs.navigator.Tool;
 import com.kjs.navigator.HighPassFIR;
@@ -26,15 +28,19 @@ public class StepCounter {
 	int stepCount = 0, peakCount = 0, valleyCount = 0;
 	private ArrayList<Double> peak_list; //record the peak value
 	private ArrayList<Double> interval_list; //record the intervals between peaks and valleys
+	private ArrayList<Long> stepPeriodList; //record the peak value
 	final double defaultPeakTH = 0.0;
 	final double defaultIntervalTH = 0.16;
-	
+	private int stepsTaken=0;
 	double Peak_TH = defaultPeakTH;
 	double Interval_TH = defaultIntervalTH;
 	Long lastPeakTime = 0l;
 	double lastPeakValue = 0.0;
 	double lastValleyValue = 0.0;
 	Tool tool;
+	private long currentStepTime;
+	private long previousStepTime;
+	private boolean firstStep=false;
 	
 	
     public interface OnStepEventListener {
@@ -148,4 +154,40 @@ public class StepCounter {
     	//mCallback.stepEvent();
     	
     }
+    
+    public void stepFilter()
+    {
+    	stepsTaken++;
+    	currentStepTime=System.currentTimeMillis();
+    	if (firstStep)
+    	{
+    		firstStep=false;
+    	}
+    	else
+    	{
+    		previousStepTime=currentStepTime;
+    		long timeBetweenSteps=currentStepTime-previousStepTime;
+    		stepPeriodList.add(timeBetweenSteps);
+    		if (stepPeriodList.size()>10) stepPeriodList.remove(0);
+    		//Find average time between steps
+    		long total=0;
+    		for(int i=0; i<stepPeriodList.size();i++){
+    			   total+=stepPeriodList.get(i);
+    			}
+    		long averageTime=total/stepPeriodList.size();
+    		Timer t = new Timer();  
+    		  
+    		  TimerTask task = new TimerTask() {  	  
+    		     @Override  
+    		     public void run() {  
+    		    	 Log.i("Timer Fired", "Current Time:"+System.currentTimeMillis()/1000);
+    		    	 mCallback.stepEvent();
+    		     }  
+
+    		  };  
+    		  t.scheduleAtFixedRate(task, 0, averageTime); 
+    		
+    	}
+    }
+    
 }

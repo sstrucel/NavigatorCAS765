@@ -220,7 +220,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 			itbpointsInner.add( new double[] { 1277, 1005 } );
 			itbpointsInner.add( new double[] { 920, 1005 } );
 		}
-		
+
 		tileView.drawPath(itbpointsOuter);
 		tileView.drawPath(itbpointsInner);
 
@@ -254,7 +254,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 			particleA[i] = aMean + aStd * rng.nextGaussian();
 			particleB[i] = bMean + bStd * rng.nextGaussian();
 		}
-		
+
 	}
 
 	public void createStartSymbol(int x, int y)
@@ -293,8 +293,8 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		currentHeading=headingDeg;
 		if (ITBhalls.contains(startLocation))
 		{
-		updateLocal(startLocation.x,startLocation.y,headingDeg);
-		return true;
+			updateLocal(startLocation.x,startLocation.y,headingDeg);
+			return true;
 		}
 		else
 		{
@@ -337,7 +337,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		Log.d("Function Call","Reset");
 		stop();
 		//Reset Variables
-		
+
 	}
 	public void start()
 	{
@@ -376,7 +376,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		//naviSymbol = new ImageView( this );
 		//naviSymbol.setImageBitmap(getBitmapFromAssets("pointer/naviPointer-"+angle+".png"));
 		//naviSymbol.setImageResource( R.drawable.smallpoint);
-		naviSymbol.setImageBitmap(getBitmapFromAssets("pointer/naviPointer-"+(int)angle+".png"));
+		naviSymbol.setImageBitmap(getBitmapFromAssets("smallpointer/naviPointer-"+(int)angle+".png"));
 		getTileView().addMarker( naviSymbol, x, y );
 		firstAddSymbol=false;
 	}
@@ -395,7 +395,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		InputStream istr = null;
 		try {
 			istr = assetManager.open(fileName); 
-		} catch (IOException e) {
+		} catch (IOException e) { 
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -415,7 +415,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		else if (arg0.sensor == mCompass){
 			if (rawHeading.size() > rawHeadingMAX ){
 				rawHeading.remove(0);
-			}
+			} 
 			//Adjust heading reading by offset
 			rawHeading.add((float)(arg0.values[0]+MAP_NORTH)%360);
 		}
@@ -545,22 +545,22 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 						}
 						else
 						{
-								   new AlertDialog.Builder(Navigator.this)
-								   .setTitle("Position out of Bounds!")
-								   .setMessage("You have selected an invalid starting position. Click OK to re-enter your starting location")
-								   .setNegativeButton("Ok",new DialogInterface.OnClickListener() {
-								    public void onClick(DialogInterface dialog,int id) {
-								     // if this button is clicked, just close
-								     // the dialog box and do nothing
-								    	inputStartLocation();
-								     dialog.cancel();
-								     
-								    }
-								   })
-								   .create()
-								   .show();
+							new AlertDialog.Builder(Navigator.this)
+							.setTitle("Position out of Bounds!")
+							.setMessage("You have selected an invalid starting position. Click OK to re-enter your starting location")
+							.setNegativeButton("Ok",new DialogInterface.OnClickListener() {
+								public void onClick(DialogInterface dialog,int id) {
+									// if this button is clicked, just close
+									// the dialog box and do nothing
+									inputStartLocation();
+									dialog.cancel();
+
+								}
+							})
+							.create()
+							.show();
 						}
-						
+
 
 					}
 				}, 1000);
@@ -754,7 +754,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		for (int i = 0; i<numParticles; i++) {
 			stepLength[i] = 20;//( particleA[i] * 1/period) + particleB[i];
 			//Log.i("Step Length", "Length:"+stepLength[i]);
- 
+
 			float x = (float) (particles[i].x + ( ( stepLength[i] ) * Math.sin(currentHeading*Math.PI/180) ));
 			float y = (float) (particles[i].y - ( ( stepLength[i] ) * Math.cos(currentHeading*Math.PI/180) ));
 			particles[i] = new Point(x,y);	
@@ -771,11 +771,13 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 
 		int survivingParticles = 0;
 		int[] particleNeedsReplacing = new int[numParticles];
-
+		float survivingAverageX;
+		float survivingAverageY;
 		ArrayList<double[]> points = new ArrayList<double[]>();
 		ArrayList<double[]> badPoints = new ArrayList<double[]>();
+		
 		for (int i = 0; i < numParticles; i++) {
-			//Log.d("Contains",""+!ITBhalls.contains(particles[i]));
+
 			if (!ITBhalls.contains(particles[i])) {
 				badPoints.add( new double[] { particles[i].x, particles[i].y } );
 				particleNeedsReplacing[i] = 1;
@@ -788,8 +790,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 				totalY += particles[i].y;
 			}
 		}
-		float survivingAverageX;
-		float survivingAverageY;
+
 		if (survivingParticles>0)
 		{
 			survivingAverageX = totalX / survivingParticles;
@@ -800,19 +801,42 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 			survivingAverageX=currentLocation.x;
 			survivingAverageY=currentLocation.y;
 		}
+		survivingParticles = 0;
+
 		for (int i = 0; i < numParticles; i++) {
-			while(particleNeedsReplacing[i] == 1) {
+			while (particleNeedsReplacing[i] == 1) {
 				float x = (float) (survivingAverageX + 0.1*locationStd * rng.nextGaussian());
 				float y = (float) (survivingAverageY + 0.1*locationStd * rng.nextGaussian());
 				particles[i] = new Point(x,y);
+
+				if (stepsSinceLastTurn<=4) {
+					float currClosest = 50;
+					int closestParticle=0;
+					for (int j = 0; j < numParticles; j++) {
+						if ((particleNeedsReplacing[j] == 0) && (i != j)) {
+							float deltaX = particles[i].x - particles[j].x;
+							float deltaY = particles[i].y - particles[j].y;
+							float distance = (float) Math.sqrt ((deltaX*deltaX + deltaY*deltaY));
+							if (distance < currClosest) {
+								currClosest = distance;
+								closestParticle = j;
+							}
+						}
+					}
+					particleA[i]=particleA[closestParticle];
+					particleB[i]=particleB[closestParticle];
+					//particles[i].a = particles[closestParticle].a;
+					//particles[i].b = particles[closestParticle].b; 
+				}
+				
 				if(ITBhalls.contains(particles[i]))
 				{
 					particleNeedsReplacing[i] = 0;     
 					totalX += particles[i].x;
 					totalY += particles[i].y;
 				}
-			}
 
+			}
 		}
 		averageX = totalX / numParticles;
 		averageY = totalY / numParticles;
@@ -833,16 +857,16 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		r.setColor(Color.RED);
 		g.setColor(Color.GREEN);
 		if(points.size()>0)
-			{
+		{
 			particlePath = tileView.drawPath(points,g);
 			Log.i("Good Points",points.toArray().toString());
-			}
+		}
 
 		if(badPoints.size()>0) 
-			{
+		{
 			badPath = tileView.drawPath(badPoints,r);
 			Log.i("Bad Points",badPoints.toArray().toString());
-			}
+		}
 		//tileView.drawPath(positions, paint)
 
 		Log.d("Current Location","X: "+currentLocation.x+" Y:"+currentLocation.y);
