@@ -145,8 +145,8 @@ public class StepCounter {
 						&& (lastReading - lastValleyValue) > Interval_TH) //set the threshold of interval between peak and valley
 				{
 					stepCount++;
-					//mCallback.stepEvent();
-					stepFilter();
+					mCallback.stepEvent();
+					//stepFilter();
 				}
 
 				climbing = false;
