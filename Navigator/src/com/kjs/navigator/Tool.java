@@ -25,7 +25,7 @@ public class Tool {
 	//According to the ajust data, estimate the threshold
 	public double getThreshold(int step_count, ArrayList<Double> peak_list){
 		Collections.sort(peak_list);
-		Log.i("peak", Integer.toString(peak_list.size()));
+		//Log.i("peak", Integer.toString(peak_list.size()));
 		if (step_count >= peak_list.size())
 			return Double.NaN;
 		else
@@ -37,7 +37,7 @@ public class Tool {
 		for(double i:source){
 			total += i;
 		}
-		Log.i("hello", Double.toString(total));
+		//Log.i("hello", Double.toString(total));
 		return total;
 	}
 }

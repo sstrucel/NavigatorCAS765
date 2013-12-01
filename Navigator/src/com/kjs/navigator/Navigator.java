@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Random;
 
 
@@ -18,10 +19,14 @@ import com.qozix.tileview.paths.DrawablePath;
 import android.os.Bundle;
 import android.os.Handler;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -49,22 +54,23 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	private DrawablePath startPath;
 	private StepCounter stepCounter;
 	//private TileViewEventListener tileEventListener;
-	
+
 	//##### Public Variables #####
-	private double[] stepLength; //step length in cm
+
 	private double CMPERPIXEL = 5;
 	private int numParticles = 50; 			// Particle count
+	private double[] stepLength= new double[numParticles]; //step length in cm 
 	private Point startLocation;
 	private Point headingLocation;
 	//private Point[] particles = new Point[10];
 	private Point currentLocation=new Point(0,0);
 	private Polygon ITBhalls;
-	
+
 	private double previousStepTimestamp = 0;
 	private SensorManager mSensorManager;
 	private Sensor mAccelerometer, mCompass;
-	
-	
+
+
 	//need to create initial particles X and Y cloud around initial position
 	private Point[] particles = new Point[numParticles];
 	double[] particleA = new double[numParticles];
@@ -72,34 +78,34 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 
 	double locationMean = 0.0;	//Mean will almost always be zero for location
 	double locationStd = 5;		//standard deviation in pixels
-	
+
 	double aMean = 20.0;		//from figure 6 in paper, approx mean of slope
 	double aStd = 10;			//guess at slope std
-	
+
 	double bMean = 30;			//from figure 6 in paper, approx value of offset
 	double bStd = 10;			//guess at offset std
 
 	Random rng = new Random();	//Random Number Generator spreads our particles in a gaussian distribution.
-	
+
 	//need to have a past history of heading values, maybe shift new values in
 	ArrayList<Float> rawHeading = new ArrayList<Float>();
 	int rawHeadingMAX = 9; 
 	ArrayList<Float> headingAtStep = new ArrayList<Float>();
 	int headingAtStepMAX = 50;
-	
+
 	int stepsSinceLastTurn = 0;
 	double deltaHeadingThreshold = Math.PI/2;
 	double averagePastHeading = 0; //TODO needs to be initialized it heading  
 	float currentHeading = 0;
-	
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_navigator);
-		
+
 		mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        mCompass = mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION);
+		mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+		mCompass = mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION);
 
 		tileView = new TileView( this );
 		setContentView( tileView );
@@ -122,7 +128,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		//tileView.addMarkerEventListener( markerEventListener );
 
 		tileView.addTileViewEventListener(tileEventListener);
-		
+
 		stepCounter= new StepCounter(this);
 		// add some pins...
 		//roundedHeading=0;
@@ -140,15 +146,15 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		tileView.setScale( 0.5 );
 		// center the frame
 		frameTo( 0.5, 0.5 );
-		
-		
+
+
 	}// End onCreate
-	
-	
+
+
 
 
 	//######### Custom Functions #############
-	
+
 	public void inputStartLocation()
 	{
 		if (!gettingInitialPoint && !gettingSecondaryPoint)
@@ -159,51 +165,51 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 			//Log.d("Function Call","InputStart Finished");
 		}
 	}
-	
+
 	private void initializeParticleFilter(){
-		
+
 		//Generate particle cloud around starting location
 		for (int i = 0; i<numParticles; i++) {
 			float x = (float) (startLocation.x + locationMean + locationStd * rng.nextGaussian());
 			float y = (float) (startLocation.y + locationMean + locationStd * rng.nextGaussian());
 			particles[i] = new Point(x,y);
-			
+
 			particleA[i] = aMean + aStd * rng.nextGaussian();
 			particleB[i] = bMean + bStd * rng.nextGaussian();
 		}
 
-			ITBhalls = Polygon.Builder()
-				.addVertex(new Point(560, 180))
-				.addVertex(new Point(580, 180))
-				.addVertex(new Point(588, 226))
-				.addVertex(new Point(1126, 221))
-				.addVertex(new Point(1126, 721))
-				.addVertex(new Point(961, 721))
-				.addVertex(new Point(961, 750))
-				.addVertex(new Point(913, 750))
-				.addVertex(new Point(913, 721))
-				.addVertex(new Point(518, 721))
-				.addVertex(new Point(517, 688))
-				.addVertex(new Point(773, 688))
-				.addVertex(new Point(773, 488))
-				.addVertex(new Point(886, 488))
-				.addVertex(new Point(886, 462))
-				.addVertex(new Point(851, 462))
-				.addVertex(new Point(851, 450))
-				.addVertex(new Point(900, 450))
-				.addVertex(new Point(900, 488))
-				.addVertex(new Point(950, 480))
-				.addVertex(new Point(950, 688))
-				.addVertex(new Point(1102, 688))
-				.addVertex(new Point(1102, 247))
-				.addVertex(new Point(600, 247))
-				.addVertex(new Point(600, 318))
-				.addVertex(new Point(560, 318))
+		ITBhalls = Polygon.Builder()
+				.addVertex(new Point(318, 154))
+				.addVertex(new Point(397, 154))
+				.addVertex(new Point(397, 275))
+				.addVertex(new Point(1808, 275))
+				.addVertex(new Point(1808, 1574))
+				.addVertex(new Point(1463, 1574))
+				.addVertex(new Point(1463, 1654))
+				.addVertex(new Point(1164, 1654))
+				.addVertex(new Point(1164, 1573))
+				.addVertex(new Point(207, 1573))
+				.addVertex(new Point(207, 1486))
+				.addVertex(new Point(1880, 1486))
+				.addVertex(new Point(1880, 965))
+				.addVertex(new Point(1180, 965))
+				.addVertex(new Point(1180, 890))
+				.addVertex(new Point(1086, 890))
+				.addVertex(new Point(1086, 860))
+				.addVertex(new Point(1207, 860))
+				.addVertex(new Point(1207, 950))
+				.addVertex(new Point(1346, 950))
+				.addVertex(new Point(1346, 1487))
+				.addVertex(new Point(1736, 1487))
+				.addVertex(new Point(1736, 340))
+				.addVertex(new Point(422, 340))
+				.addVertex(new Point(422, 516))
+				.addVertex(new Point(318, 516))
 				.close()
-				.addVertex(new Point(789, 504))
-				.addVertex(new Point(789, 688))
-				.addVertex(new Point(926, 688))
-				.addVertex(new Point(924, 504))
+				.addVertex(new Point(920, 1005))
+				.addVertex(new Point(920, 1490))
+				.addVertex(new Point(1277, 1490))
+				.addVertex(new Point(1277, 1005))
 				.build();
 	}
 
@@ -227,12 +233,19 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 			points.add( new double[] { startLocation.x,  startLocation.y } );
 		}
 		startPath=tileView.drawPath(points);
-		
+
 	}
 	public void initializeStartHeading()
 	{
 		int headingDeg=findHeading(startLocation.x,startLocation.y, headingLocation.x,headingLocation.y);
 		Log.d("xHeading Created","Start Location X:"+startLocation.x+" Y:"+startLocation.y+" Heading Angle:"+headingDeg);
+		for (int i=0;i<rawHeadingMAX;i++)
+		{
+			rawHeading.add((float) headingDeg);
+			if (rawHeading.size() > rawHeadingMAX ){
+				rawHeading.remove(0);
+			}
+		}
 		currentHeading=headingDeg;
 		updateLocal(startLocation.x,startLocation.y,headingDeg);
 	}
@@ -250,7 +263,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		double dY= y-y2;
 		//return (int)((Math.atan2(dY, dX)*180)/Math.PI);
 		double arcTanVal=(Math.atan2(dY, dX)*180)/Math.PI;
-		
+
 		//return (int)(270-arcTanVal);
 		double newVal= (360-(-arcTanVal+180)+90);
 		//Log.d("Heading Raw","Heading Raw A:"+newVal);
@@ -280,14 +293,14 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		Log.d("Function Call","Start");
 		stepCounter.pushdata(1, 2, 3);
 		mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
-        mSensorManager.registerListener(this, mCompass, SensorManager.SENSOR_DELAY_GAME);
+		mSensorManager.registerListener(this, mCompass, SensorManager.SENSOR_DELAY_GAME);
 
 	}
 	private void stop() {
 		// TODO Auto-generated method stub
 		Log.d("Function Call","Stop");
 		mSensorManager.unregisterListener(this, mAccelerometer);
-        mSensorManager.unregisterListener(this, mCompass);
+		mSensorManager.unregisterListener(this, mCompass);
 	}
 	/*
 	private void addPin( double x, double y ) {
@@ -295,12 +308,12 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		imageView.setImageResource( R.drawable.push_pin );
 		getTileView().addMarker( imageView, x, y );
 	}*/
-	
+
 	private void updateLocal( double x, double y ,double angle) {
 		if (!firstAddSymbol)
 		{
 			getTileView().removeMarker(naviSymbol);
-			
+
 		}
 		//naviSymbol = new ImageView( this );
 		//naviSymbol.setImageBitmap(getBitmapFromAssets("pointer/naviPointer-"+angle+".png"));
@@ -316,8 +329,8 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 			Toast.makeText( getApplicationContext(), "You are here", Toast.LENGTH_LONG ).show();
 		}		
 	};
-	
-	
+
+
 	public Bitmap getBitmapFromAssets(String fileName) {
 		AssetManager assetManager = getAssets();
 
@@ -460,16 +473,16 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 				gettingSecondaryPoint=false;
 				//Wipe the Symbols
 				final Handler handler = new Handler();
-		        handler.postDelayed(new Runnable() {
-		            @Override
-		            public void run() {
-		                // Do something after 5s = 5000ms
-		            	cleanupSymbols();
-		            	initializeStartHeading();
-		            	initializeParticleFilter();
+				handler.postDelayed(new Runnable() {
+					@Override
+					public void run() {
+						// Do something after 5s = 5000ms
+						cleanupSymbols();
+						initializeStartHeading();
+						initializeParticleFilter();
 
-		            }
-		        }, 1000);
+					}
+				}, 1000);
 				//cleanupSymbols();
 				//initializeParticleFilter();
 			}
@@ -489,6 +502,9 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		}
 
 	};
+	private DrawablePath particlePath;
+	private boolean firstPath=true;
+	private DrawablePath badPath;
 	//########## PREMADE STUFF ###############
 	//Options Premade
 	@Override
@@ -552,8 +568,9 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	public void stepEvent() {
 		// TODO Auto-generated method stub
 		Log.d("Step event","Step Event triggered");
-		updatePosition();
-		
+		stepTaken(System.currentTimeMillis()); 
+		//updatePosition();
+
 	}
 	public float fixCompassReadings()
 	{
@@ -585,7 +602,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 			{
 				min=rawHeading.get(i);
 			}
-			
+
 		}
 		//If differ by 180 +180 to the mix 
 		if (Math.abs(max-min)>180)
@@ -598,89 +615,148 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		}
 		return p%360;
 	}
-	
-	
+	public void logCompass()
+	{
+		for (int i=0;i<rawHeading.size();i++)
+		{
+			Log.d("Compass Readings","Reading "+i+": "+rawHeading.get(i));
+		}
+	}
+
 	public void stepTaken(double currentStepTimestamp){
 		//First, we shall try to determine if the user has turned
 
 		//Perform filter on heading directions
 		//Not sure how that is done
 		//sort recent heading values
+		logCompass();
 		float shift=fixCompassReadings();
-		Float[] sortedHeading = (Float[]) rawHeading.toArray();
-		Arrays.sort(sortedHeading);
-	 
+		Log.d("Compass Shift","Shift: "+shift); 
+		logCompass();
+		//Float[] sortedHeading = (Float[]) rawHeading.toArray();
+		Collections.sort(rawHeading);
+		//Arrays.sort(sortedHeading);
+		logCompass();
+
 		//TODO headingAtCurrentStep[] = ( ( sortedHeading[4] + sortedHeading[5] + sortedHeading[6] ) / 3 );
 		//minHeading=Math.min(d1, d2)
-		currentHeading = ( ( sortedHeading[4] + sortedHeading[5] + sortedHeading[6] ) / 3 );
-		headingAtStep.add(currentHeading-shift);
-		
+		currentHeading = ( ( rawHeading.get(4) + rawHeading.get(5) + rawHeading.get(6) ) / 3 )-shift;
+		Log.d("Compass Heading","Heading: "+currentHeading);
+		headingAtStep.add(currentHeading);
+
 		stepsSinceLastTurn++;
 		double headingSum = 0;
-	
+
 		for (int i = 0; i<headingAtStep.size(); i++) {
 			headingSum += headingAtStep.get(i);
 		}
 		double averagePastHeading = headingSum / stepsSinceLastTurn;
-		
+
 		double deltaHeading = headingAtStep.get(headingAtStep.size() - 1) - averagePastHeading;
-		
+
 		if (deltaHeading > deltaHeadingThreshold) {
 			stepsSinceLastTurn = 0;
 			headingAtStep.removeAll(headingAtStep);
 		}
-		
+
 		//currentHeading = averagePastHeading;
-		
+
 		int totalX = 0;
 		int totalY = 0;
-		
+
 		// calculate step frequency from step period
 		double period = previousStepTimestamp - currentStepTimestamp;
 		previousStepTimestamp = currentStepTimestamp;
 
-		
+
 		//Second, we update all of the particles, we also compute the average X and Y at this point
 		for (int i = 0; i<numParticles; i++) {
 			stepLength[i] = ( particleA[i] * 1/period) + particleB[i];
-		
-			
+
+
 			float x = (float) (particles[i].x + ( ( stepLength[i] ) * Math.cos(currentHeading ) ));
 			float y = (float) (particles[i].y + ( ( stepLength[i] ) * Math.sin(currentHeading ) ));
 			particles[i] = new Point(x,y);	
-			
-			totalX += particles[i].x;
-			totalY += particles[i].y;
-		}
-		
-		int averageX = totalX / numParticles;
-		int averageY = totalY / numParticles;
-		
-		totalX = 0;
-		totalY = 0;
-		
-		for (int i = 0; i < numParticles; i++) {
-			if (ITBhalls.contains(particles[i])) {
-				float x = (float) (averageX + locationStd * rng.nextGaussian());
-				float y = (float) (averageY + locationStd * rng.nextGaussian());
-				particles[i] = new Point(x,y);
-			}
-			
+
 			totalX += particles[i].x;
 			totalY += particles[i].y;
 		}
 
+		int averageX = totalX / numParticles;
+		int averageY = totalY / numParticles;
+
+		totalX = 0;
+		totalY = 0;
+
+		int survivingParticles = 0;
+		int[] particleNeedsReplacing = new int[numParticles];
+
+		ArrayList<double[]> points = new ArrayList<double[]>();
+		ArrayList<double[]> badPoints = new ArrayList<double[]>();
+		for (int i = 0; i < numParticles; i++) {
+			Log.d("Contains",""+!ITBhalls.contains(particles[i]));
+			if (!ITBhalls.contains(particles[i])) {
+				badPoints.add( new double[] { particles[i].x, particles[i].y } );
+				particleNeedsReplacing[i] = 1;
+			}
+			else {
+				survivingParticles ++;
+				particleNeedsReplacing[i] = 0;
+				points.add( new double[] { particles[i].x, particles[i].y } );
+				totalX += particles[i].x;
+				totalY += particles[i].y;
+			}
+		}
+		float survivingAverageX;
+		float survivingAverageY;
+		if (survivingParticles>0)
+		{
+			survivingAverageX = totalX / survivingParticles;
+			survivingAverageY = totalY / survivingParticles;
+		}
+		else
+		{
+			survivingAverageX=currentLocation.x;
+			survivingAverageY=currentLocation.y;
+		}
+		for (int i = 0; i < numParticles; i++) {
+			if (particleNeedsReplacing[i] == 1) {
+				float x = (float) (survivingAverageX + 0.1*locationStd * rng.nextGaussian());
+				float y = (float) (survivingAverageY + 0.1*locationStd * rng.nextGaussian());
+				particles[i] = new Point(x,y);
+			}
+
+		}
 		averageX = totalX / numParticles;
 		averageY = totalY / numParticles;
-		
-		currentLocation = new Point (averageX, averageY);	
-		
+
+		currentLocation = new Point (averageX, averageY);
+		//DEBUG PARTICLES
+		if (firstPath)
+		{
+			firstPath=false;
+		}
+		else
+		{
+			tileView.removePath(particlePath);
+			tileView.removePath(badPath);
+		}
+		Paint r= new Paint();
+		r.setColor(Color.RED);
+		particlePath = tileView.drawPath(points);
+
+		if(badPoints.size()>0) badPath = tileView.drawPath(badPoints,r);
+		//tileView.drawPath(positions, paint)
+
+
 		updateLocal(currentLocation.x,currentLocation.y,currentHeading);
-	
+
+
+
 		//TODO: plot current position
 	}
-	
-	
+
+
 	//############## Unused Stuff #####################
 	/*
 	private HotSpot hotMap;
