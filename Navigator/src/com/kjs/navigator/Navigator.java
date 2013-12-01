@@ -69,7 +69,8 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	private double previousStepTimestamp = 0;
 	private SensorManager mSensorManager;
 	private Sensor mAccelerometer, mCompass;
-
+	private final double PIXELS_PER_METER= 90/10; //pixels in measurement/ meters in measurement
+	private final double MAP_NORTH= 270;//Value of compass when pointing north on our map
 
 	//need to create initial particles X and Y cloud around initial position
 	private Point[] particles = new Point[numParticles];
@@ -77,7 +78,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	double[] particleB = new double[numParticles];
 
 	double locationMean = 0.0;	//Mean will almost always be zero for location
-	double locationStd = 5;		//standard deviation in pixels
+	double locationStd = 25;		//standard deviation in pixels
 
 	double aMean = 20.0;		//from figure 6 in paper, approx mean of slope
 	double aStd = 10;			//guess at slope std
@@ -97,6 +98,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	double deltaHeadingThreshold = Math.PI/2;
 	double averagePastHeading = 0; //TODO needs to be initialized it heading  
 	float currentHeading = 0;
+	private boolean startLocationEntered=false;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -146,37 +148,6 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		tileView.setScale( 0.5 );
 		// center the frame
 		frameTo( 0.5, 0.5 );
-
-
-	}// End onCreate
-
-
-
-
-	//######### Custom Functions #############
-
-	public void inputStartLocation()
-	{
-		if (!gettingInitialPoint && !gettingSecondaryPoint)
-		{
-			Log.d("Function Call","Input Start");
-
-			gettingInitialPoint=true;
-			//Log.d("Function Call","InputStart Finished");
-		}
-	}
-
-	private void initializeParticleFilter(){
-
-		//Generate particle cloud around starting location
-		for (int i = 0; i<numParticles; i++) {
-			float x = (float) (startLocation.x + locationMean + locationStd * rng.nextGaussian());
-			float y = (float) (startLocation.y + locationMean + locationStd * rng.nextGaussian());
-			particles[i] = new Point(x,y);
-
-			particleA[i] = aMean + aStd * rng.nextGaussian();
-			particleB[i] = bMean + bStd * rng.nextGaussian();
-		}
 
 		ITBhalls = Polygon.Builder()
 				.addVertex(new Point(318, 154))
@@ -252,7 +223,37 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		
 		tileView.drawPath(itbpointsOuter);
 		tileView.drawPath(itbpointsInner);
-		
+
+	}// End onCreate
+
+
+
+
+	//######### Custom Functions #############
+
+	public void inputStartLocation()
+	{
+		if (!gettingInitialPoint && !gettingSecondaryPoint)
+		{
+			Log.d("Function Call","Input Start");
+
+			gettingInitialPoint=true;
+			//startLocationEntered=false;
+			//Log.d("Function Call","InputStart Finished");
+		}
+	}
+
+	private void initializeParticleFilter(){
+
+		//Generate particle cloud around starting location
+		for (int i = 0; i<numParticles; i++) {
+			float x = (float) (startLocation.x + locationMean + locationStd * rng.nextGaussian());
+			float y = (float) (startLocation.y + locationMean + locationStd * rng.nextGaussian());
+			particles[i] = new Point(x,y);
+
+			particleA[i] = aMean + aStd * rng.nextGaussian();
+			particleB[i] = bMean + bStd * rng.nextGaussian();
+		}
 		
 	}
 
@@ -278,7 +279,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		startPath=tileView.drawPath(points);
 
 	}
-	public void initializeStartHeading()
+	public boolean initializeStartHeading()
 	{
 		int headingDeg=findHeading(startLocation.x,startLocation.y, headingLocation.x,headingLocation.y);
 		Log.d("xHeading Created","Start Location X:"+startLocation.x+" Y:"+startLocation.y+" Heading Angle:"+headingDeg);
@@ -290,7 +291,15 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 			}
 		}
 		currentHeading=headingDeg;
+		if (ITBhalls.contains(startLocation))
+		{
 		updateLocal(startLocation.x,startLocation.y,headingDeg);
+		return true;
+		}
+		else
+		{
+			return false;
+		}
 	}
 	public void updatePosition()
 	{
@@ -326,18 +335,21 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	public void reset()
 	{
 		Log.d("Function Call","Reset");
-		currentX+=10;
-		currentY+=10; 
-		roundedHeading=(roundedHeading+60)%360;
-		updateLocal(currentX,currentY, roundedHeading);
+		stop();
+		//Reset Variables
+		
 	}
 	public void start()
 	{
 		Log.d("Function Call","Start");
-		stepCounter.pushdata(1, 2, 3);
+		inputStartLocation();
+		//mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
+		//mSensorManager.registerListener(this, mCompass, SensorManager.SENSOR_DELAY_GAME);
+	}
+	public void startSensors()
+	{
 		mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
 		mSensorManager.registerListener(this, mCompass, SensorManager.SENSOR_DELAY_GAME);
-
 	}
 	private void stop() {
 		// TODO Auto-generated method stub
@@ -351,7 +363,10 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		imageView.setImageResource( R.drawable.push_pin );
 		getTileView().addMarker( imageView, x, y );
 	}*/
-
+	private double pixelsToMeters(double pixels)
+	{
+		return pixels*PIXELS_PER_METER;
+	}
 	private void updateLocal( double x, double y ,double angle) {
 		if (!firstAddSymbol)
 		{
@@ -401,7 +416,8 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 			if (rawHeading.size() > rawHeadingMAX ){
 				rawHeading.remove(0);
 			}
-			rawHeading.add(arg0.values[0]);
+			//Adjust heading reading by offset
+			rawHeading.add((float)(arg0.values[0]+MAP_NORTH)%360);
 		}
 
 	}
@@ -521,8 +537,30 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 					public void run() {
 						// Do something after 5s = 5000ms
 						cleanupSymbols();
-						initializeStartHeading();
-						initializeParticleFilter();
+						//initializeStartHeading();
+						if(initializeStartHeading())
+						{
+							initializeParticleFilter();
+							startSensors();
+						}
+						else
+						{
+								   new AlertDialog.Builder(Navigator.this)
+								   .setTitle("Position out of Bounds!")
+								   .setMessage("You have selected an invalid starting position. Click OK to re-enter your starting location")
+								   .setNegativeButton("Ok",new DialogInterface.OnClickListener() {
+								    public void onClick(DialogInterface dialog,int id) {
+								     // if this button is clicked, just close
+								     // the dialog box and do nothing
+								    	inputStartLocation();
+								     dialog.cancel();
+								     
+								    }
+								   })
+								   .create()
+								   .show();
+						}
+						
 
 					}
 				}, 1000);
