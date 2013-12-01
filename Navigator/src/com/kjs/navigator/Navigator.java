@@ -599,9 +599,9 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	public boolean onOptionsItemSelected(MenuItem item) {
 		// Handle item selection
 		switch (item.getItemId()) {
-		case R.id.action_inputStart:
-			inputStartLocation();
-			return true;
+//		case R.id.action_inputStart:
+//			inputStartLocation();
+//			return true;
 		case R.id.action_reset:
 			reset();
 			return true;
@@ -752,7 +752,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 
 		//Second, we update all of the particles, we also compute the average X and Y at this point
 		for (int i = 0; i<numParticles; i++) {
-			stepLength[i] = 20;//( particleA[i] * 1/period) + particleB[i];
+			stepLength[i] = ( particleA[i] * 1/period) + particleB[i];
 			//Log.i("Step Length", "Length:"+stepLength[i]);
 
 			float x = (float) (particles[i].x + ( ( stepLength[i] ) * Math.sin(currentHeading*Math.PI/180) ));
