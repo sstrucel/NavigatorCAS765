@@ -43,6 +43,9 @@ public class StepCounter {
 	private long currentStepTime;
 	private long previousStepTime;
 	private boolean firstStep=true;
+	private long currentStepTimeB;
+	private long previousStepTimeB;
+	private boolean firstStepB=true;
 	private Timer filterTimer;
 	private TimerTask timer;
 	private boolean firstStart=true;
@@ -145,8 +148,9 @@ public class StepCounter {
 						&& (lastReading - lastValleyValue) > Interval_TH) //set the threshold of interval between peak and valley
 				{
 					stepCount++;
-					mCallback.stepEvent();
+					//mCallback.stepEvent();
 					//stepFilter();
+					filterSmallSteps();
 				}
 
 				climbing = false;
@@ -171,6 +175,24 @@ public class StepCounter {
 
 	}
 
+	public void filterSmallSteps()
+	{
+		if(firstStep)
+		{
+			currentStepTime=System.currentTimeMillis();
+			mCallback.stepEvent();
+		}
+		else
+		{
+			previousStepTime=currentStepTime;
+			currentStepTime=System.currentTimeMillis();
+			if(currentStepTime-previousStepTime>300)
+			{
+				mCallback.stepEvent();
+			}
+		}
+		
+	}
 	public void stepFilter()
 	{
 		stepsTaken++;

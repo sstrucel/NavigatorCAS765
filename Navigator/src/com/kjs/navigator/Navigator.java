@@ -60,7 +60,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 
 	//##### Public Variables #####
 
-	private double CMPERPIXEL = 4.03;
+	private double CMPERPIXEL = 4.4;
 	private int numParticles = 50; 			// Particle count
 	private double[] stepLength= new double[numParticles]; //step length in cm 
 	private Point startLocation;
@@ -84,14 +84,19 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	private Point[] particles = new Point[numParticles];
 	double[] particleA = new double[numParticles];
 	double[] particleB = new double[numParticles];
+	double[] particleDH = new double[numParticles];
 	double locationMean = 0.0;	//Mean will almost always be zero for location
 	double locationStd = 25;		//standard deviation in pixels
 
-	double aMean = 20.0;		//from figure 6 in paper, approx mean of slope
-	double aStd = 10;			//guess at slope std
+	double aMean = 6.0;		//from figure 6 in paper, approx mean of slope
+	double aStd = 1;			//guess at slope std
 
-	double bMean = 30;			//from figure 6 in paper, approx value of offset
-	double bStd = 10;			//guess at offset std
+	double bMean = 18;			//from figure 6 in paper, approx value of offset
+	double bStd = 1;			//guess at offset std
+	
+	double dhMean=0;
+	double dhStd=20;
+	
 
 	Random rng = new Random();	//Random Number Generator spreads our particles in a gaussian distribution.
 
@@ -268,6 +273,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 
 			particleA[i] = aMean + aStd * rng.nextGaussian();
 			particleB[i] = bMean + bStd * rng.nextGaussian();
+			particleDH[i] = dhMean + dhStd * rng.nextGaussian();
 		}
 
 	}
@@ -394,7 +400,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		//naviSymbol = new ImageView( this );
 		//naviSymbol.setImageBitmap(getBitmapFromAssets("pointer/naviPointer-"+angle+".png"));
 		//naviSymbol.setImageResource( R.drawable.smallpoint);
-		naviSymbol.setImageBitmap(getBitmapFromAssets("smallpointer/naviPointer-"+(int)angle+".png"));
+		naviSymbol.setImageBitmap(getBitmapFromAssets("pointer/naviPointer-"+(int)angle+".png"));
 		getTileView().addMarker( naviSymbol, x, y );
 		firstAddSymbol=false;
 	}
@@ -678,7 +684,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	public void stepEvent() {
 		// TODO Auto-generated method stub
 		Log.d("Step event","Step Event triggered");
-		stepTaken(System.currentTimeMillis()/1000); 
+		stepTaken(System.currentTimeMillis()/1000.0); 
 		//updatePosition();
 
 	}
@@ -785,15 +791,22 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		// calculate step frequency from step period
 		double period = currentStepTimestamp-previousStepTimestamp ;
 		previousStepTimestamp = currentStepTimestamp;
-
-
+		
+		double freq=1.0/period;
+		if (freq>3)freq=3;
+		if (freq<0.8)freq=0.8;
+		Log.i("Frequency","Frequency "+freq+" Period"+period);
 		//Second, we update all of the particles, we also compute the average X and Y at this point
 		for (int i = 0; i<numParticles; i++) {
-			stepLength[i] = ( particleA[i] * 1/period) + particleB[i];
+			double tempStep= ( particleA[i] * freq) + particleB[i];
+			if (tempStep<11.25) tempStep=11.25;
+			if(tempStep>33)tempStep=33; 
+			stepLength[i] = tempStep;//( particleA[i] * freq) + particleB[i];
 			//Log.i("Step Length", "Length:"+stepLength[i]);
-
-			float x = (float) (particles[i].x + ( ( stepLength[i] ) * Math.sin(currentHeading*Math.PI/180) ));
-			float y = (float) (particles[i].y - ( ( stepLength[i] ) * Math.cos(currentHeading*Math.PI/180) ));
+			//deltaHeading= headingMean + 
+			double newHeading=(currentHeading+360+particleDH[i])%360;
+			float x = (float) (particles[i].x + ( ( stepLength[i] ) * Math.sin(newHeading*Math.PI/180) ));
+			float y = (float) (particles[i].y - ( ( stepLength[i] ) * Math.cos(newHeading*Math.PI/180) ));
 			particles[i] = new Point(x,y);	
 
 			totalX += particles[i].x;
@@ -842,9 +855,10 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 
 		for (int i = 0; i < numParticles; i++) {
 			while (particleNeedsReplacing[i] == 1) {
-				float x = (float) (survivingAverageX + 0.1*locationStd * rng.nextGaussian());
-				float y = (float) (survivingAverageY + 0.1*locationStd * rng.nextGaussian());
+				float x = (float) (survivingAverageX + 0.5*locationStd * rng.nextGaussian());
+				float y = (float) (survivingAverageY + 0.5*locationStd * rng.nextGaussian());
 				particles[i] = new Point(x,y);
+				particleDH[i] = dhStd * rng.nextGaussian();
 
 				if (stepsSinceLastTurn<=4) {
 					float currClosest = 50;
@@ -880,6 +894,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 
 		currentLocation = new Point (averageX, averageY);
 		//DEBUG PARTICLES
+		/*
 		if (firstPath)
 		{
 			firstPath=false;
@@ -905,7 +920,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 			Log.i("Bad Points",badPoints.toArray().toString());
 		}
 		//tileView.drawPath(positions, paint)
-
+		*/
 		Log.d("Current Location","X: "+currentLocation.x+" Y:"+currentLocation.y);
 		updateLocal(currentLocation.x,currentLocation.y,currentHeading);
 
