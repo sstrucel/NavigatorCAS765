@@ -19,9 +19,12 @@ import com.qozix.tileview.paths.DrawablePath;
 import android.os.Bundle;
 import android.os.Handler;
 import android.app.Activity;
+import android.app.AlarmManager;
 import android.app.AlertDialog;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -57,7 +60,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 
 	//##### Public Variables #####
 
-	private double CMPERPIXEL = 5;
+	private double CMPERPIXEL = 4.03;
 	private int numParticles = 50; 			// Particle count
 	private double[] stepLength= new double[numParticles]; //step length in cm 
 	private Point startLocation;
@@ -74,14 +77,13 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	
 	//########### CONSTANTS###################
 	private final double PIXELS_PER_METER= 90/10; //pixels in measurement/ meters in measurement
-	private final double MAP_NORTH= 270;//Value of compass when pointing north on our map
+	private final double MAP_NORTH= 90;//Value of compass when pointing north on our map
 	private final int UPDATE_PACE=50;
 	
 	//need to create initial particles X and Y cloud around initial position
 	private Point[] particles = new Point[numParticles];
 	double[] particleA = new double[numParticles];
 	double[] particleB = new double[numParticles];
-
 	double locationMean = 0.0;	//Mean will almost always be zero for location
 	double locationStd = 25;		//standard deviation in pixels
 
@@ -108,6 +110,8 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	private DrawablePath particlePath;
 	private boolean firstPath=true;
 	private DrawablePath badPath;
+	
+	PendingIntent intent;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -233,6 +237,8 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		tileView.drawPath(itbpointsOuter);
 		tileView.drawPath(itbpointsInner);
 
+		intent = PendingIntent.getActivity(this.getBaseContext(), 0,
+	            new Intent(getIntent()), getIntent().getFlags());
 	}// End onCreate
 
 
@@ -345,6 +351,9 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	{
 		Log.d("Function Call","Reset");
 		stop();
+		AlarmManager mgr = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+		mgr.set(AlarmManager.RTC, System.currentTimeMillis() + 2000, intent);
+		System.exit(2);
 		//Reset Variables
 
 	}
