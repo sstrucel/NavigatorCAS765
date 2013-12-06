@@ -14,7 +14,7 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme" android:debuggable="true">
         <activity
-            android:name="com.kjs.navigator.Navigator"
+            android:name="com.CAS765.IndoorLocalization.kjs.Navigator"
             android:label="@string/app_name" 
             android:screenOrientation="portrait">
             <intent-filter>
