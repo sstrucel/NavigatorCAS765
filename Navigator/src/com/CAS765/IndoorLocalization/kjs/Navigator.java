@@ -53,6 +53,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	//private int currentY;
 	//private int roundedHeading;
 	private double scale=1;
+	private double freq;
 	private boolean gettingInitialPoint=false;
 	private boolean gettingSecondaryPoint=false;
 	private boolean firstAddSymbol=true;
@@ -60,12 +61,13 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	private ImageView headingSymbol;
 	private DrawablePath startPath;
 	private StepCounter stepCounter;
+	private int stepNo=0;
 	//private TileViewEventListener tileEventListener;
 
 	//##### Public Variables #####
 
 	private double CM_PER_PIXEL = 4.4;
-	private int numParticles = 50; 			// Particle count
+	private int numParticles = 200; 			// Particle count
 	private double[] stepLength= new double[numParticles]; //step length in cm 
 	private Point startLocation;
 	private Point headingLocation;
@@ -82,7 +84,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	//########### CONSTANTS###################
 	//private final double PIXELS_PER_METER= 90/10; //pixels in measurement/ meters in measurement
 	private final double MAP_NORTH= 90;//Value of compass when pointing north on our map
-	private final int UPDATE_PACE=50;
+	private final int UPDATE_PACE=25;
 	
 	//need to create initial particles X and Y cloud around initial position
 	private Point[] particles = new Point[numParticles];
@@ -95,11 +97,11 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	double aMean = 6.0;		//from figure 6 in paper, approx mean of slope
 	double aStd = 1;			//guess at slope std
 
-	double bMean = 18;			//from figure 6 in paper, approx value of offset
+	double bMean = 12;			//from figure 6 in paper, approx value of offset
 	double bStd = 1;			//guess at offset std
 	
-	double dhMean=0;
-	double dhStd=20;
+	double dhMean=0;		
+	double dhStd=20;			//put a 20 deg variation for the heading to help estimation
 	
 
 	Random rng = new Random();	//Random Number Generator spreads our particles in a gaussian distribution.
@@ -111,7 +113,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	int headingAtStepMAX = 50;
 
 	int stepsSinceLastTurn = 0;
-	double deltaHeadingThreshold = Math.PI/2;
+	double deltaHeadingThreshold = 45;
 	double averagePastHeading = 0; //TODO needs to be initialized it heading  
 	float currentHeading = 0;
 	//private boolean startLocationEntered=false;
@@ -142,7 +144,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		tileView.addDetailLevel( 0.250f, "tiles/1/%col%/%row%.png", "downsamples/map.png");
 		tileView.addDetailLevel( 0.125f, "tiles/0/%col%/%row%.png", "downsamples/map.png");
 
-		// let's use 0-1 positioning...
+		// set the relative bounds to the same as the size of the image
 		tileView.defineRelativeBounds( 0, 0, 2048,  1887);
 
 		// center markers along both axes
@@ -158,13 +160,13 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		//roundedHeading=0;
 		//currentX=200;
 		//currentY=200;
-		Log.d("Created", "Current Position "+currentLocation.toString());
+		//Log.d("Created", "Current Position "+currentLocation.toString());
 		naviSymbol = new ImageView( this );
 		naviSymbol.setImageBitmap(getBitmapFromAssets("pointer/naviPointer-"+0+".png"));
-		firstAddSymbol=true;
+		//firstAddSymbol=true;
 		//updateLocal(currentLocation.x,currentLocation.y,currentHeading);
-		firstAddSymbol=false;
-		Log.d("Created", "Current Position "+currentLocation.toString());
+		//firstAddSymbol=false;
+		//Log.d("Created", "Current Position "+currentLocation.toString());
 		//updateLocal(currentX,currentY,roundedHeading);
 		// scale it down to manageable size
 		tileView.setScale( 0.5 );
@@ -243,9 +245,11 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 			itbpointsInner.add( new double[] { 920, 1005 } );
 		}
 
+		//Draw paths for the bounds of the tracked position zone
 		tileView.drawPath(itbpointsOuter);
 		tileView.drawPath(itbpointsInner);
-
+		
+		//Intent for restarting the app when reset is pressed
 		intent = PendingIntent.getActivity(this.getBaseContext(), 0,
 	            new Intent(getIntent()), getIntent().getFlags());
 	}// End onCreate
@@ -262,7 +266,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	{
 		if (!gettingInitialPoint && !gettingSecondaryPoint)
 		{
-			Log.d("Function Call","Input Start");
+			//Log.d("Function Call","Input Start");
 
 			new AlertDialog.Builder(Navigator.this)
 			.setTitle("Input Starting Location")
@@ -713,13 +717,44 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		case R.id.action_stop:
 			stop();
 			return true;
+		case R.id.action_debugPixels:
+			debugPixels();
+			return true;
+		case R.id.action_debugSteps:
+			debugSteps();
+			return true;
+		case R.id.action_debugStride:
+			averageStrideLength();
+			return true;
 		default:
 			return super.onOptionsItemSelected(item);
 		}
 	}
-
-
-
+	public void debugPixels()
+	{
+		Toast.makeText(getApplicationContext(), "Current Location X: "+currentLocation.x+" Y: "+currentLocation.y+" Angle :"+currentHeading, Toast.LENGTH_LONG).show();
+	}
+	
+	public void debugSteps()
+	{
+		Toast.makeText(getApplicationContext(), "Steps Taken: "+stepNo, Toast.LENGTH_SHORT).show();
+	}
+	public void averageStrideLength()
+	{
+		double total=0;
+		for (int i = 0; i<numParticles; i++) {
+			//Calculate step length estimate from a and b
+			double tempStep= ( particleA[i] * freq) + particleB[i];
+			//Limit stepLength to only reasonable values
+			if (tempStep<11.25) tempStep=11.25;
+			if(tempStep>33)tempStep=33; 
+			//stepLength[i] = tempStep;
+			total+=tempStep;
+		}
+		double average=total/numParticles;
+	//	Log.i("Average","avg: "+average);
+		Toast.makeText(getApplicationContext(), "Average Stride length: "+pixelsToMeters(average)+"m", Toast.LENGTH_SHORT).show();
+	}
 
 
 	//Sensor Premade
@@ -750,8 +785,10 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 	
 	// Step Event interface method that gets called my the stepCounter class
 	public void stepEvent() {
+		stepNo++;
 		// TODO Auto-generated method stub
 		Log.d("Step event","Step Event triggered");
+		//Toast.makeText(getApplicationContext(), "Step Event "+stepNo, Toast.LENGTH_SHORT).show();
 		//Call the main stepTaken method with a timestamp in seconds
 		stepTaken(System.currentTimeMillis()/1000.0); 
 
@@ -832,6 +869,10 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		currentHeading = ( ( rawHeading.get(4) + rawHeading.get(5) + rawHeading.get(6) ) / 3 );
 		//Log.d("Compass Heading","Heading: "+currentHeading);
 		headingAtStep.add(currentHeading);
+		if (headingAtStep.size()==10)
+		{
+			headingAtStep.remove(0);
+		}
 
 		stepsSinceLastTurn++;
 		double headingSum = 0;
@@ -839,11 +880,20 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		for (int i = 0; i<headingAtStep.size(); i++) {
 			headingSum += headingAtStep.get(i);
 		}
-		double averagePastHeading = headingSum / stepsSinceLastTurn;
-
+		double averagePastHeading;
+		if (stepsSinceLastTurn>headingAtStep.size())
+		{
+			averagePastHeading = headingSum / headingAtStep.size();
+		}
+		else
+		{
+			averagePastHeading = headingSum / stepsSinceLastTurn;
+		}
+		//Toast.makeText(getApplicationContext(), "Average Heading: "+averagePastHeading, Toast.LENGTH_SHORT).show();
 		double deltaHeading = headingAtStep.get(headingAtStep.size() - 1) - averagePastHeading;
 
 		if (deltaHeading > deltaHeadingThreshold) {
+//			Toast.makeText(getApplicationContext(), "Turn Event", Toast.LENGTH_SHORT).show();
 			stepsSinceLastTurn = 0;
 			headingAtStep.removeAll(headingAtStep);
 		}
@@ -855,7 +905,7 @@ public class Navigator extends Activity implements SensorEventListener, OnStepEv
 		double period = currentStepTimestamp-previousStepTimestamp ;
 		previousStepTimestamp = currentStepTimestamp;
 		
-		double freq=1.0/period;
+		freq=1.0/period;
 		//limit frequency to reasonable human values (when step events are too close or too far)
 		if (freq>3)freq=3;
 		if (freq<0.8)freq=0.8;
